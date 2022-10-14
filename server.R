@@ -4,12 +4,12 @@ function(input, output, session) {
   playernames <<- read.csv("Data/PlayerNames.csv")
   
   # Get current season
-  currentSeason <<- as.integer(quarter(Sys.Date(), with_year = TRUE, fiscal_start = 11))
+  currentSeason <<- as.integer(quarter(Sys.Date(), with_year = TRUE, fiscal_start = 10))
 
   # Colour map for conditional formatting
-  palette <- function(x){
+  GrnRedPalette <- function(x){
     if (!is.na(x)){
-      rgb(colorRamp(c("#FF0000","#FFFFFF", "#00FF00"))(x),alpha = 100, maxColorValue = 255)
+      rgb(colorRamp(c("#FF0000","#FFFFFF", "#00FF00"))(x),alpha = 75, maxColorValue = 255)
     } else {
       "#e9e9e9" #grey
     }
@@ -283,19 +283,19 @@ function(input, output, session) {
   totalStyle <- function(value, index, name) {
     normalized <- (value - min(totalTable[name], na.rm = T)) /
       (max(totalTable[name], na.rm = T) - min(totalTable[name], na.rm = T))
-    color <- palette(normalized)
+    color <- GrnRedPalette(normalized)
     list(background = color)
   }      
   averageStyle <- function(value, index, name) {
     normalized <- (value - min(averageTable[name], na.rm = T)) /
       (max(averageTable[name], na.rm = T) - min(averageTable[name], na.rm = T))
-    color <- palette(normalized)
+    color <- GrnRedPalette(normalized)
     list(background = color)
   }      
   per60Style <- function(value, index, name) {
     normalized <- (value - min(per60Table[name], na.rm = T)) /
       (max(per60Table[name], na.rm = T) - min(per60Table[name], na.rm = T))
-    color <- palette(normalized)
+    color <- GrnRedPalette(normalized)
     list(background = color)
   }      
   
@@ -730,18 +730,25 @@ function(input, output, session) {
   skaterData <<- left_join(skaterData,playernames,"ID")
   goalieData <<- read.csv(paste0("Data/allGoalies/",currentSeason,".csv"))
   goalieData <<- left_join(goalieData,playernames,"ID")
+  skaterDataLS <<- read.csv(paste0("Data/allSkaters/",currentSeason-1,".csv"))
+  skaterDataLS <<- left_join(skaterDataLS,playernames,"ID")
+  goalieDataLS <<- read.csv(paste0("Data/allGoalies/",currentSeason-1,".csv"))
+  goalieDataLS <<- left_join(goalieDataLS,playernames,"ID")
   
+  allFantasySkaters <<- unique(rbind(skaterData[,c('ID','Name')],skaterDataLS[,c('ID','Name')]))
+  allFantasyGoalies <<- unique(rbind(goalieData[,c('ID','Name')],goalieDataLS[,c('ID','Name')]))
+
   #Initialize tracking variables
   numC_UI <- 0
   numLW_UI <- 0
   numRW_UI <- 0
   numD_UI <- 0
   numG_UI <- 0
-  numC <- reactive({input$numC})
-  numLW <- reactive({input$numLW})
-  numRW <- reactive({input$numRW})
-  numD <- reactive({input$numD})
-  numG <- reactive({input$numG})
+  numC <- reactive({as.numeric(input$numC)})
+  numLW <- reactive({as.numeric(input$numLW)})
+  numRW <- reactive({as.numeric(input$numRW)})
+  numD <- reactive({as.numeric(input$numD)})
+  numG <- reactive({as.numeric(input$numG)})
   numC_d <- debounce(numC,100)
   numLW_d <- debounce(numLW,100)
   numRW_d <- debounce(numRW,100)
@@ -758,7 +765,7 @@ function(input, output, session) {
           selectizeInput(
             paste0("C",i),
             label = NULL,
-            choices = c("",skaterData$Name),
+            choices = c("",sort(allFantasySkaters$Name)),
             selected = ""
           )
         )
@@ -776,7 +783,7 @@ function(input, output, session) {
           selectizeInput(
             paste0("LW",i),
             label = NULL,
-            choices = c("",skaterData$Name),
+            choices = c("",sort(allFantasySkaters$Name)),
             selected = ""
           )
         )
@@ -794,7 +801,7 @@ function(input, output, session) {
           selectizeInput(
             paste0("RW",i),
             label = NULL,
-            choices = c("",skaterData$Name),
+            choices = c("",sort(allFantasySkaters$Name)),
             selected = ""
           )
         )
@@ -812,7 +819,7 @@ function(input, output, session) {
           selectizeInput(
             paste0("D",i),
             label = NULL,
-            choices = c("",skaterData$Name),
+            choices = c("",sort(allFantasySkaters$Name)),
             selected = ""
           )
         )
@@ -830,7 +837,7 @@ function(input, output, session) {
           selectizeInput(
             paste0("G",i),
             label = NULL,
-            choices = c("",goalieData$Name),
+            choices = c("",sort(allFantasyGoalies$Name)),
             selected = ""
           )
         )
@@ -839,6 +846,7 @@ function(input, output, session) {
   })
   
   # Dynamically update global team dataframe
+  teamGLOB_r = reactiveValues() 
   observe({
     # compile team members into one dataframe
     team = as.data.frame(matrix(ncol=3))
@@ -848,7 +856,7 @@ function(input, output, session) {
     # append centers
     for (i in 1:numC_UI) {
       playerName = input[[paste0("C",i)]]
-      playerID = skaterData$ID[skaterData$Name == playerName]
+      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
       if (!is.null(playerName)) {
         if (!playerName=="") {
           team = rbind(team,c(playerID,playerName,"C"))
@@ -860,7 +868,7 @@ function(input, output, session) {
     for (i in 1:numLW_UI) {
       
       playerName = input[[paste0("LW",i)]]
-      playerID = skaterData$ID[skaterData$Name == playerName]
+      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
       if (!is.null(playerName)) {
         if (!playerName=="") {
           team = rbind(team,c(playerID,playerName,"LW"))
@@ -872,7 +880,7 @@ function(input, output, session) {
     for (i in 1:numRW_UI) {
       
       playerName = input[[paste0("RW",i)]]
-      playerID = skaterData$ID[skaterData$Name == playerName]
+      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
       if (!is.null(playerName)) {
         if (!playerName=="") {
           team = rbind(team,c(playerID,playerName,"RW"))
@@ -885,7 +893,7 @@ function(input, output, session) {
     for (i in 1:numD_UI) {
       
       playerName = input[[paste0("D",i)]]
-      playerID = skaterData$ID[skaterData$Name == playerName]
+      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
       if (!is.null(playerName)) {
         if (!playerName=="") {
           team = rbind(team,c(playerID,playerName,"D"))
@@ -897,7 +905,7 @@ function(input, output, session) {
     for (i in 1:numG_UI) {
       
       playerName = input[[paste0("G",i)]]
-      playerID = goalieData$ID[goalieData$Name == playerName]
+      playerID = allFantasyGoalies$ID[allFantasyGoalies$Name == playerName]
       if (!is.null(playerName)) {
         if (!playerName=="") {
           team = rbind(team,c(playerID,playerName,"G"))
@@ -907,7 +915,7 @@ function(input, output, session) {
     
     team = team[-1,]
     teamGLOB <<- team
-    
+    teamGLOB_r$df = teamGLOB
     
   })
   
@@ -927,19 +935,19 @@ function(input, output, session) {
   observeEvent(input$teamFileLoad,priority = 3, {
     filePath = input$teamFileLoad
     teamGLOB <<- read.csv(filePath$datapath)
-    
+    teamGLOB_r$df  = teamGLOB
     
     # Update team composition filters
-        updateNumericInput(session,"numLW",value =0)
-    updateNumericInput(session,"numC",value =0)
-    updateNumericInput(session,"numRW",value =0)
-    updateNumericInput(session,"numD",value =0)
-    updateNumericInput(session,"numG",value =0)
-    updateNumericInput(session,"numLW",value =sum(teamGLOB$Position=="LW"))
-    updateNumericInput(session,"numC",value =sum(teamGLOB$Position=="C"))
-    updateNumericInput(session,"numRW",value =sum(teamGLOB$Position=="RW"))
-    updateNumericInput(session,"numD",value =sum(teamGLOB$Position=="D"))
-    updateNumericInput(session,"numG",value =sum(teamGLOB$Position=="G"))
+    updateSelectInput(session,"numLW",selected ="0")
+    updateSelectInput(session,"numC",selected ="0")
+    updateSelectInput(session,"numRW",selected ="0")
+    updateSelectInput(session,"numD",selected ="0")
+    updateSelectInput(session,"numG",selected ="0")
+    updateSelectInput(session,"numLW",selected =as.character(sum(teamGLOB$Position=="LW")))
+    updateSelectInput(session,"numC",selected =as.character(sum(teamGLOB$Position=="C")))
+    updateSelectInput(session,"numRW",selected =as.character(sum(teamGLOB$Position=="RW")))
+    updateSelectInput(session,"numD",selected =as.character(sum(teamGLOB$Position=="D")))
+    updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
   })
   
   # fill in player names
@@ -952,7 +960,6 @@ function(input, output, session) {
     numG_d()
     
     if (exists("teamGLOB")) {
-    
       for (i in 1:numLW_d()) {
         updateSelectizeInput(session,
                              paste0("LW",i),
@@ -981,6 +988,189 @@ function(input, output, session) {
     }
   })
   
-  
+  ## Fantasy Team - Team Stats Box ===============================
+  observeEvent(c(teamGLOB_r$df,input$goalsFP,input$assistsFP,input$pointsFP,
+                 input$pppFP,input$shFP,input$shotsFP,input$hitsFP,input$blocksFP,input$fowFP,
+                 input$gsFP,input$winsFP,input$gaFP,input$savesFP,input$soFP,input$teamStatRange,
+                 input$teamStatType),ignoreInit=T,{
+    
+    # Get currently selected team
+    team = teamGLOB_r$df
+    
+    # Create data table
+    teamSkaterData = as.data.frame(matrix(ncol=13,nrow=0))
+    teamGoalieData = as.data.frame(matrix(ncol=8,nrow=0))
+    if (nrow(team)>0){
+      for (i in 1:nrow(team)) {
+        if (team$Position[i] != "G") {
+          
+          # Read player data if it exists, read dummy file if not
+          playerID = team$ID[i]
+          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))) {
+            playerData = read.csv(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))
+          } else {
+            playerData = read.csv(paste0("Data/Players/dummyfileskater.csv"))[-1,]
+          }
+          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
+            playerDataLS = read.csv(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))
+          } else {
+            playerDataLS = read.csv(paste0("Data/Players/dummyfileskater.csv"))[-1,]
+          }
+          
+          # Format dates
+          playerData$Date = as.Date(playerData$Date)
+          playerDataLS$Date = as.Date(playerDataLS$Date)
+          
+          # Filter based on chosen date range if needed
+          if (input$teamStatRange == "ls") {
+            playerData = playerDataLS
+          } else if (input$teamStatRange != "s") {
+            playerData = playerData[playerData$Date > today()-as.numeric(input$teamStatRange),]
+          }
+          
+          
+          # Get stat totals
+          playerData = playerData %>%
+            summarise(GP = nrow(playerData),Goals = sum(Scoring_G),Assists = sum(Scoring_A),Points = sum(Scoring_PTS),PPP = sum(Goals_PP)+sum(Assists_PP),
+                      SHP = sum(Goals_SH)+sum(Assists_SH),Shots = sum(S),Hits = sum(HIT),Blocks = sum(BLK),FOW = sum(FOW))
+          playerData = cbind(Position = team$Position[i],Name = team$Name[i],`Fantasy Points` = NA,playerData)
+          
+          
+          # Calculate fantasy points
+          playerData$`Fantasy Points` = input$goalsFP*playerData$Goals + input$assistsFP*playerData$Assists +
+            input$pointsFP*playerData$Points + input$pppFP*playerData$PPP + input$shFP*playerData$SHP + 
+            input$shotsFP*playerData$Shots + input$blocksFP*playerData$Blocks + input$hitsFP*playerData$Hits +
+            input$fowFP*playerData$FOW
+          
+          # Calc per game stats if needed
+          if (input$teamStatType =="pg") {
+            playerData[,-c(1,2,4)] = round(playerData[,-c(1,2,4)]/playerData$GP,2)
+          }
+          
+          # Append player data to team table
+          colnames(teamSkaterData) = colnames(playerData)
+          teamSkaterData=rbind(teamSkaterData,playerData)
+          
+        } else {
+          
+          # Read player data if it exists, read dummy file if not
+          playerID = team$ID[i]
+          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))) {
+            playerData = read.csv(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))
+          } else {
+            playerData = read.csv(paste0("Data/Players/dummyfilegoalie.csv"))[-1,]
+          }
+          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
+            playerDataLS = read.csv(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))
+          } else {
+            playerDataLS = read.csv(paste0("Data/Players/dummyfilegoalie.csv"))[-1,]
+          }
+          
+          # Format dates
+          playerData$Date = as.Date(playerData$Date)
+          playerDataLS$Date = as.Date(playerDataLS$Date)
+          
+          # Filter based on chosen date range if needed
+          if (input$teamStatRange == "ls") {
+            playerData = playerDataLS
+          } else if (input$teamStatRange != "s") {
+            playerData = playerData[playerData$Date > today()-as.numeric(input$teamStatRange),]
+          }
+          
+          # Get stat totals
+          playerData = playerData %>%
+            summarize(GP = max(G), Wins = sum(playerData$DEC=='W'),Shutouts = sum(Goalie.Stats_SO),Saves = sum(Goalie.Stats_SV),GA = sum(Goalie.Stats_GA))
+          playerData = cbind(Position = team$Position[i],Name = team$Name[i],`Fantasy Points` = NA,playerData)
+          
+          # Calculate fantasy points
+          playerData$`Fantasy Points` = input$gsFP*playerData$GP + input$winsFP*playerData$Wins +
+            input$savesFP*playerData$Saves + input$soFP*playerData$Shutouts + input$gaFP*playerData$GA
+          
+          # Calc per game stats if needed
+          if (input$teamStatType =="pg") {
+            playerData[,-c(1,2,4)] = round(playerData[,-c(1,2,4)]/playerData$GP,2)
+          }
+          
+          # Append player data to team table
+          colnames(teamGoalieData) = colnames(playerData)
+          teamGoalieData=rbind(teamGoalieData,playerData)
+          
+        }
+        
+      }
+    }
+    
+    teamSkaterData[apply(teamSkaterData,c(1,2),is.na)] = 0
+    teamSkaterData[apply(teamSkaterData,c(1,2),is.infinite)] = 0
+    teamGoalieData[apply(teamGoalieData,c(1,2),is.na)] = 0
+    teamGoalieData[apply(teamGoalieData,c(1,2),is.infinite)] = 0
+    
+    # Reactable styling
+    skaterTableStyle <- function(value, index, name) {
+      normalized <- (value - min(teamSkaterData[name], na.rm = T)) /
+        (max(teamSkaterData[name], na.rm = T) - min(teamSkaterData[name], na.rm = T))
+      color <- GrnRedPalette(normalized)
+      list(background = color)
+    }   
+    
+    # Skater table output
+    output$teamSkaterStats <- renderReactable({
+      reactable(
+        teamSkaterData,
+        defaultColDef = colDef(
+          cell = function(value) format(value, nsmall = 1),
+          align = "center",
+          minWidth = 50,
+          headerStyle = list(background = "#f7f7f8"),
+          style = skaterTableStyle
+        ),
+        columns = list(
+          Position = colDef(style = list()),
+          Name = colDef(style = list())
+        ),
+        outlined = TRUE, 
+        borderless = TRUE,
+        highlight = TRUE,
+        defaultPageSize = 100,
+        theme = reactableTheme(
+          backgroundColor = "rgba(0,0,0,0)"
+        )
+      )
+    })
+    
+    # Reactable styling
+    goalieTableStyle <- function(value, index, name) {
+      normalized <- (value - min(teamGoalieData[name], na.rm = T)) /
+        (max(teamGoalieData[name], na.rm = T) - min(teamGoalieData[name], na.rm = T))
+      color <- GrnRedPalette(normalized)
+      list(background = color)
+    }   
+    
+    # Goalie table output
+    output$teamGoalieStats <- renderReactable({
+      reactable(
+        teamGoalieData,
+        defaultColDef = colDef(
+          cell = function(value) format(value, nsmall = 1),
+          align = "center",
+          minWidth = 50,
+          headerStyle = list(background = "#f7f7f8"),
+          style = goalieTableStyle
+        ),
+        columns = list(
+          Position = colDef(style = list()),
+          Name = colDef(style = list())
+        ),
+        outlined = TRUE, 
+        borderless = TRUE,
+        highlight = TRUE,
+        defaultPageSize = 100,
+        theme = reactableTheme(
+          backgroundColor = "rgba(0,0,0,0)"
+        )
+      )
+    })
+    
+  })
   
 }

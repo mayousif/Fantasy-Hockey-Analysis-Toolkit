@@ -1,7 +1,7 @@
 ## Sidebar =================================
 sidebar = dashboardSidebar(
   width = "15%",
-  title = h4("Fantasy Hockey Analysis Toolkit"),
+  title = h4("Fantasy Hockey Toolkit"),
   sidebarMenu(id = "tabs",
     menuItem(
       selected = TRUE,
@@ -165,7 +165,7 @@ body <- dashboardBody(
     # Fantasy team stats tab
     tabItem(tabName = "teamstats",
       style = "overflow-x: hidden;overflow-y: auto;",
-      column(width = 8,
+      column(width = 9,
         box(
           id = "teamloadingbox",
           width = 12,
@@ -178,36 +178,36 @@ body <- dashboardBody(
             column(width = 3,align="center",
               fileInput(
                 "teamFileLoad",
-                label = h2("Load Team From .csv File"),
+                label = h1("Load Team From .csv File"),
                 accept = ".csv"
               )
             ),
             column(width=6,align="center",
               fluidRow(
-                h2("Team Composition")
+                h1("Team Composition")
               ),
               fluidRow(
                 column(width = 4,
-                  numericInput("numLW","LW",4,min=1)
+                  selectInput("numLW","LW",0:9,selected=4)
                 ),
                 column(width = 4, 
-                  numericInput("numC"," C",4,min=1)
+                  selectInput("numC"," C",0:9,selected=4)
                 ),
                 column(width = 4,
-                  numericInput("numRW","RW",4,min=1)
+                  selectInput("numRW","RW",0:9,selected=4)
                 )
               ),
               fluidRow(
                 column(width = 4, offset = 2,
-                  numericInput("numD","D",4,min=1)
+                  selectInput("numD","D",0:9,selected=4)
                 ),
                 column(width = 4,
-                  numericInput("numG","G",4,min=1)
+                  selectInput("numG","G",0:9,selected=4)
                 )
               )
             ),
             column(width=3,align="center",
-              h2("Save Team to .csv File"),
+              h1("Save Team to .csv File"),
               downloadButton(
                 "teamFileSave",
                 label = "Save",
@@ -217,40 +217,73 @@ body <- dashboardBody(
           ),
           fluidRow(
             column(width=12,align="center",
-             h3("Left Wingers")
+             h2("Left Wingers")
             ),
             uiOutput("leftwings")
           ),
           fluidRow(
             column(width=12,align="center",
-             h3("Centers")
+             h2("Centers")
             ),
             uiOutput("centers")
           ),
           
           fluidRow(
             column(width=12,align="center",
-             h3("Right Wingers")
+             h2("Right Wingers")
             ),
             uiOutput("rightwings")
           ),
           fluidRow(
             column(width=12,align="center",
-              h3("Defensemen")
+              h2("Defensemen")
             ),
             uiOutput("defensemen")
           ),
           fluidRow(
             column(width=12,align="center",
-              h3("Goalies")
+              h2("Goalies")
             ),
             uiOutput("goalies")
           )
         
           
+        ),
+        box(
+          id = "teamstatsbox",
+          width = 12,
+          title = h1("Team Stats"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE,
+          fluidRow(
+            column(width = 3, align = "center",
+              radioGroupButtons("teamStatType",
+                                label = h2("Stat Type"),
+                                choices = c("Total" = "tot",
+                                            "Per Game" = "pg"),
+                                selected = "tot",
+                                status = "primary")
+            ),
+            column(width = 3, align = "center",
+              selectInput("teamStatRange",
+                          label = h2("Filter Period"),
+                          choices = c("Last Season" = "ls",
+                                      "Current Season" = "s",
+                                      "Last 30 Days" = 30,
+                                      "Last 14 Days" = 14,
+                                      "Last 7 Days" = 7),
+                          selected = "s")
+            )
+          ),
+          reactableOutput("teamSkaterStats"),
+          reactableOutput("teamGoalieStats")
+          
+          
         )
       ),
-      column(width = 4,
+      column(width = 3,
         box(
           id = "leaguesettingsbox",
           width = 12,
@@ -335,6 +368,15 @@ body <- dashboardBody(
               column(width = 7,align = "left",
                 numericInput("blocksFP",character(0),value = 0.4)
               )
+            ),
+            fluidRow(
+              column(width = 5,align = "right",
+                br(),
+                h2("FOW:")
+              ),
+              column(width = 7,align = "left",
+                numericInput("fowFP",character(0),value = 0)
+              )
             )
           ),
           column(width =6, align = "center",
@@ -378,20 +420,14 @@ body <- dashboardBody(
             fluidRow(
               column(width = 5,align = "right",
                 br(),
-                h2("SHO:")
+                h2("SO:")
               ),
               column(width = 7,align = "left",
-                numericInput("shoFP",character(0),value = 5)
+                numericInput("soFP",character(0),value = 5)
               )
             )
           )
         )
-      ),
-      box(
-        
-        
-        
-        
       )
     )
   ),

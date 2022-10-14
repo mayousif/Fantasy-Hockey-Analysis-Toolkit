@@ -3,6 +3,10 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import re
+from numpy import unique
+from collections import Counter
+import fiscalyear
+fiscalyear.START_MONTH = 10
 
 # Pull stats for all players of given type ("skaters" or "goalies")
 # for all given seasons (e.g., 2022)
@@ -30,7 +34,7 @@ def pullPlayerStats(seasons,playerType):
                 
         # Iterate through all players that played this season
         for player in playerIDs:
-            
+            print("Getting",player, "stats for",season)
             # Create folders to store player data if they dont exist
             basedirectory = "Data/Players/" + player
             os.makedirs(basedirectory, exist_ok=True)
@@ -86,32 +90,58 @@ def pullPlayerStats(seasons,playerType):
 
 def getPlayerNames():
     # Get list of all playerIDs in data folder
-    playerIDs = os.listdir("Data/Players/")
+    playerIDs = next(os.walk("Data/Players/"))[1]
+    
+    # Get list of existing data in PlayerNames file
+    existingData = pd.read_csv("Data/PlayerNames.csv")
+    existingIDs = list(existingData['ID'])
     
     # Find player name from website and save to csv
-    playerNames = []
-    playerPositions = []
+    playerNames = list(existingData['Name'])
+    playerPositions = list(existingData['Position'])
     for player in playerIDs:
-        url = "https://www.hockey-reference.com/players/"+player[0]+"/"+player+".html"
-        page = requests.get(url)
-        soup = BeautifulSoup(page.text, 'lxml')
-        metadata = soup.find_all('div',id = 'meta')
-        playerNames.append(metadata[0].find('span').text)
-        position = metadata[0].find('p').text
-        position = position.replace("\n", " ")
-        position = position.replace("\xa0", " ")
-        position = re.search(' (.*?) ', position).group(1)
-        playerPositions.append(position)
-        
+        if player not in existingIDs:
+            print("Getting player info for",player)
+            url = "https://www.hockey-reference.com/players/"+player[0]+"/"+player+".html"
+            page = requests.get(url)
+            soup = BeautifulSoup(page.text, 'lxml')
+            metadata = soup.find_all('div',id = 'meta')
+            playerNames.append(metadata[0].find('span').text)
+            position = metadata[0].find('p').text
+            position = position.replace("\n", " ")
+            position = position.replace("\xa0", " ")
+            position = re.search(' (.*?) ', position).group(1)
+            playerPositions.append(position)
+            existingIDs.append(player)
+            
     playerNamesDF = pd.DataFrame(playerNames)
     playerNamesDF.columns = ["Name"]
     playerNamesDF['Position'] = playerPositions
-    playerNamesDF['ID'] = playerIDs
+    playerNamesDF['ID'] = existingIDs
+    
+    # Standardize positions
+    playerNamesDF.loc[playerNamesDF['Position']=='W','Position'] = 'RW'
+    playerNamesDF.loc[playerNamesDF['Position']=='F','Position'] = 'C'
+    playerNamesDF.loc[playerNamesDF['Position']=='C/LW','Position'] = 'C'
+    playerNamesDF.loc[playerNamesDF['Position']=='C/RW','Position'] = 'C'
+    playerNamesDF.loc[playerNamesDF['Position']=='C/W','Position'] = 'C'
+    playerNamesDF.loc[playerNamesDF['Position']=='RW/C','Position'] = 'RW'
+    playerNamesDF.loc[playerNamesDF['Position']=='LW/C','Position'] = 'LW'
+    playerNamesDF.loc[playerNamesDF['Position']=='D/LW','Position'] = 'D'
+    playerNamesDF.loc[playerNamesDF['Position']=='D/RW','Position'] = 'D'
+    playerNamesDF.loc[playerNamesDF['Position']=='D/W','Position'] = 'D'
+    
+    # Add number to duplicated names
+    dup = dict(Counter(playerNamesDF['Name']))
+    l_uniq = unique(playerNamesDF['Name'],return_index=True)
+    names = [name if i == 0 else name + ' (' + str(i+1) + ')' for name in playerNamesDF['Name'][sorted(l_uniq[1])] for i in range(dup[name])]
+    playerNamesDF['Name'] = names
+    
     playerNamesDF.to_csv("Data/PlayerNames.csv",index=False)
         
 def mergeSeasonStats(seasons):
     # Get list of all playerIDs in data folder
-    playerIDs = os.listdir("Data/Players/")
+    playerIDs = next(os.walk("Data/Players/"))[1]
     
     # Get player names and positions
     playerNamesDF = pd.read_csv("Data/PlayerNames.csv")
@@ -122,6 +152,7 @@ def mergeSeasonStats(seasons):
         seasons = [seasons]
         
     for season in seasons:
+        print("Merging player stats for",season)
         mergedDataSkaters = pd.DataFrame()
         mergedDataGoalies = pd.DataFrame()
         for player in playerIDs:
@@ -189,4 +220,11 @@ def mergeSeasonStats(seasons):
         mergedDataSkaters.to_csv("Data/allSkaters/"+str(season)+".csv",index=False)
         mergedDataGoalies.to_csv("Data/allGoalies/"+str(season)+".csv",index=False)
         
-        
+
+
+# Execute functions
+currentSeason = fiscalyear.FiscalYear.current().fiscal_year
+pullPlayerStats(currentSeason,"skaters")
+pullPlayerStats(currentSeason,"goalies")
+getPlayerNames()
+mergeSeasonStats(currentSeason)
