@@ -10,6 +10,7 @@ library(reactable)
 library(stringr)
 library(lubridate)
 library(scales)
+library(data.table)
 
 # Setup extended js code to allow dynamic collapsing of boxes
 collapsejs = "

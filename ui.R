@@ -1,24 +1,16 @@
 ## Sidebar =================================
 sidebar = dashboardSidebar(
   width = "15%",
-  title = h4("Fantasy Hockey Toolkit"),
+  title = h5("Fantasy Hockey Toolkit"),
   sidebarMenu(id = "tabs",
-    menuItem(
+    menuItem(text = strong("Player Stats"),
       selected = TRUE,
-      strong("Player Stats"),
       icon = icon("person-skating"),
-      menuSubItem(
-        selectizeInput("playerInput", 
-                       "Select Player",
-                       choices = NULL,
-                       selected = NULL),
-        icon = NULL
-      ),
-      menuSubItem(
-        actionButton("loadPlayerStats","Load Data"),
-        icon = NULL,
-        tabName = "playerstats"
-      )
+      selectizeInput("playerInput", 
+                     "Select Player",
+                     choices = NULL,
+                     selected = NULL),
+      menuSubItem(text = "",tabName = "playerstats",icon=NULL)
     ),
     menuItem(
       strong("Fantasy Metrics"), 
@@ -57,6 +49,11 @@ body <- dashboardBody(
          ".shiny-output-error { visibility: hidden; }",
          ".shiny-output-error:before { visibility: hidden; }"),
     tags$script(HTML(scrollbarjs)),
+    tags$script("
+      Shiny.addCustomMessageHandler('gear_click', function(value) {
+      Shiny.setInputValue('gear_click', value);
+      });
+    ")
   ),
   tabItems(
     # Player stats tab
@@ -66,11 +63,11 @@ body <- dashboardBody(
         box(
           id = "seasonrankingbox",
           width = 4,
-          title = h1("Percentile Ranking"),
+          title = h4("Percentile Ranking"),
           solidHeader=T,
           status = "primary",
           collapsible = TRUE,
-          collapsed = TRUE,
+          collapsed = FALSE,
           fluidRow(
             column(width = 3, align = "center",
               uiOutput("playerName"),
@@ -138,11 +135,11 @@ body <- dashboardBody(
         box(
           id = "seasonstatsbox",
           width = 8,
-          title = h1("Seasonal Summary"),
+          title = h4("Seasonal Summary"),
           solidHeader=T,
           status = "primary",
           collapsible = TRUE,
-          collapsed = TRUE,
+          collapsed = FALSE,
           fluidRow(
             column(width = 5,align="left",
               radioGroupButtons("seasonStatsType",
@@ -169,7 +166,7 @@ body <- dashboardBody(
         box(
           id = "teamloadingbox",
           width = 12,
-          title = h1("Create/Upload Team"),
+          title = h4("Create/Upload Team"),
           solidHeader=T,
           status = "primary",
           collapsible = TRUE,
@@ -188,21 +185,21 @@ body <- dashboardBody(
               ),
               fluidRow(
                 column(width = 4,
-                  selectInput("numLW","LW",0:9,selected=4)
+                  selectInput("numLW",h2("LW"),0:9,selected=4)
                 ),
                 column(width = 4, 
-                  selectInput("numC"," C",0:9,selected=4)
+                  selectInput("numC",h2("C"),0:9,selected=4)
                 ),
                 column(width = 4,
-                  selectInput("numRW","RW",0:9,selected=4)
+                  selectInput("numRW",h2("RW"),0:9,selected=4)
                 )
               ),
               fluidRow(
                 column(width = 4, offset = 2,
-                  selectInput("numD","D",0:9,selected=4)
+                  selectInput("numD",h2("D"),0:9,selected=4)
                 ),
                 column(width = 4,
-                  selectInput("numG","G",0:9,selected=4)
+                  selectInput("numG",h2("G"),0:9,selected=4)
                 )
               )
             ),
@@ -252,7 +249,7 @@ body <- dashboardBody(
         box(
           id = "teamstatsbox",
           width = 12,
-          title = h1("Team Stats"),
+          title = h4("Team Stats"),
           solidHeader=T,
           status = "primary",
           collapsible = TRUE,
@@ -281,13 +278,24 @@ body <- dashboardBody(
           reactableOutput("teamGoalieStats")
           
           
+        ),
+        box(
+          id = "testbox",
+          width = 12,
+          title = h1("Test"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE
         )
+        
+        
       ),
       column(width = 3,
         box(
           id = "leaguesettingsbox",
           width = 12,
-          title = h1("League Settings"),
+          title = h4("League Settings"),
           solidHeader=T,
           status = "primary",
           collapsible = TRUE,

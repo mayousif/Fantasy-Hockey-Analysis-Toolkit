@@ -220,8 +220,43 @@ def mergeSeasonStats(seasons):
         mergedDataSkaters.to_csv("Data/allSkaters/"+str(season)+".csv",index=False)
         mergedDataGoalies.to_csv("Data/allGoalies/"+str(season)+".csv",index=False)
         
+def getPlayerLines():
+    # Get URL for each team
+    url = "https://www.dailyfaceoff.com/teams/"
+    agent = {"User-Agent":"Mozilla/5.0"}
+    page = requests.get(url,headers=agent)
+    soup = BeautifulSoup(page.text, 'lxml')
+    teams = soup.find_all('a',{"class": "team-logo-img"})
+    teams = [i['href'] for i in teams]
+    
+    # Get playerIDs
+    playerIDs = pd.read_csv('Data/PlayerNames.csv')
+    
+    # Loop through each team
+    allPlayerLines = pd.DataFrame()
+    for team in teams:
+        urlteam = url+team 
+        page = requests.get(urlteam,headers=agent)
+        soup = BeautifulSoup(page.text, 'lxml')
+        
+        # Get forward lines
+        for i in [1,2,3,4]:
+            LW = soup.find_all('td',id='LW'+str(i))[0]
+            LW = LW.find('span',{'class':'player-name'}).text
+            #LWID = playerIDs.loc[playerIDs['Name'].str.lower()==str.lower(LW),'ID'].iloc[0]
+            RW = soup.find_all('td',id='RW'+str(i))[0]
+            RW = RW.find('span',{'class':'player-name'}).text
+            #RWID = playerIDs.loc[playerIDs['Name'].str.lower()==str.lower(RW),'ID'].iloc[0]
+            C = soup.find_all('td',id='C'+str(i))[0]
+            C = C.find('span',{'class':'player-name'}).text
+            #CID = playerIDs.loc[playerIDs['Name'].str.lower()==str.lower(C),'ID'].iloc[0]
+            
+            LWLine = pd.DataFrame({'Player':LW,'Linemate1':C,'Linemate2':RW},index = [0])
+            CLine = pd.DataFrame({'Player':C,'Linemate1':LW,'Linemate2':RW},index = [0])
+            RWLine = pd.DataFrame({'Player':RW,'Linemate1':C,'Linemate2':LW},index = [0])
 
-
+            allPlayerLines = pd.concat([allPlayerLines,LWLine,CLine,RWLine],ignore_index=True)
+        
 # Execute functions
 currentSeason = fiscalyear.FiscalYear.current().fiscal_year
 pullPlayerStats(currentSeason,"skaters")
