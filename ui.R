@@ -3,19 +3,19 @@ sidebar = dashboardSidebar(
   width = "15%",
   title = h5("Fantasy Hockey Toolkit"),
   sidebarMenu(id = "tabs",
-    menuItem(text = strong("Player Stats"),
-      selected = TRUE,
-      icon = icon("person-skating"),
-      selectizeInput("playerInput", 
-                     "Select Player",
-                     choices = NULL,
-                     selected = NULL),
-      menuSubItem(text = "",tabName = "playerstats",icon=NULL)
-    ),
     menuItem(
+      selected = TRUE,
       strong("Fantasy Metrics"), 
       tabName = "teamstats", 
       icon = icon("people-group")
+    ),    
+    menuItem(text = strong("Player Stats"),
+      startExpanded = TRUE,
+      icon = icon("person-skating"),
+      menuSubItem(selectizeInput("playerInput", 
+                     "Select Player",
+                     choices = NULL,
+                     selected = NULL),tabName = "playerstats",icon=NULL)
     )
   )
 )

@@ -221,6 +221,7 @@ def mergeSeasonStats(seasons):
         mergedDataGoalies.to_csv("Data/allGoalies/"+str(season)+".csv",index=False)
         
 def getPlayerLines():
+    print("Getting updated player lines")
     # Get URL for each team
     url = "https://www.dailyfaceoff.com/teams/"
     agent = {"User-Agent":"Mozilla/5.0"}
@@ -228,9 +229,6 @@ def getPlayerLines():
     soup = BeautifulSoup(page.text, 'lxml')
     teams = soup.find_all('a',{"class": "team-logo-img"})
     teams = [i['href'] for i in teams]
-    
-    # Get playerIDs
-    playerIDs = pd.read_csv('Data/PlayerNames.csv')
     
     # Loop through each team
     allPlayerLines = pd.DataFrame()
@@ -240,26 +238,56 @@ def getPlayerLines():
         soup = BeautifulSoup(page.text, 'lxml')
         
         # Get forward lines
-        for i in [1,2,3,4]:
+        for i in [1,2,3]:
             LW = soup.find_all('td',id='LW'+str(i))[0]
             LW = LW.find('span',{'class':'player-name'}).text
-            #LWID = playerIDs.loc[playerIDs['Name'].str.lower()==str.lower(LW),'ID'].iloc[0]
             RW = soup.find_all('td',id='RW'+str(i))[0]
             RW = RW.find('span',{'class':'player-name'}).text
-            #RWID = playerIDs.loc[playerIDs['Name'].str.lower()==str.lower(RW),'ID'].iloc[0]
             C = soup.find_all('td',id='C'+str(i))[0]
             C = C.find('span',{'class':'player-name'}).text
-            #CID = playerIDs.loc[playerIDs['Name'].str.lower()==str.lower(C),'ID'].iloc[0]
             
-            LWLine = pd.DataFrame({'Player':LW,'Linemate1':C,'Linemate2':RW},index = [0])
-            CLine = pd.DataFrame({'Player':C,'Linemate1':LW,'Linemate2':RW},index = [0])
-            RWLine = pd.DataFrame({'Player':RW,'Linemate1':C,'Linemate2':LW},index = [0])
+            LWLine = pd.DataFrame({'Player':LW,'Linemate1':C,'Linemate2':RW,'Line':i},index = [0])
+            CLine = pd.DataFrame({'Player':C,'Linemate1':LW,'Linemate2':RW,'Line':i},index = [0])
+            RWLine = pd.DataFrame({'Player':RW,'Linemate1':C,'Linemate2':LW,'Line':i},index = [0])
 
             allPlayerLines = pd.concat([allPlayerLines,LWLine,CLine,RWLine],ignore_index=True)
         
+        # Get defense pairs
+        for i in [1,2]:
+            LD = soup.find_all('td',id='LD'+str(i))[0]
+            LD = LD.find('span',{'class':'player-name'}).text
+            RD = soup.find_all('td',id='RD'+str(i))[0]
+            RD = RD.find('span',{'class':'player-name'}).text
+            
+            LDLine = pd.DataFrame({'Player':LD,'Linemate1':RD,'Linemate2':'','Line':i},index = [0])
+            RDLine = pd.DataFrame({'Player':RD,'Linemate1':LD,'Linemate2':'','Line':i},index = [0])
+            allPlayerLines = pd.concat([allPlayerLines,LDLine,RDLine],ignore_index=True)
+        
+        # Get PP1 and PP2 players
+        for i in [1,2]:
+            PPLW = soup.find_all('td',id='PPLW'+str(i))[0]
+            PPLW = PPLW.find('span',{'class':'player-name'}).text
+            PPRW = soup.find_all('td',id='PPRW'+str(i))[0]
+            PPRW = PPRW.find('span',{'class':'player-name'}).text
+            PPC = soup.find_all('td',id='PPC'+str(i))[0]
+            PPC = PPC.find('span',{'class':'player-name'}).text
+            PPLD = soup.find_all('td',id='PPLD'+str(i))[0]
+            PPLD = PPLD.find('span',{'class':'player-name'}).text
+            PPRD = soup.find_all('td',id='PPRD'+str(i))[0]
+            PPRD = PPRD.find('span',{'class':'player-name'}).text
+            
+            PPLine = [PPLW,PPC,PPRW,PPLD,PPRD]
+            
+            allPlayerLines.loc[allPlayerLines['Player'].isin(PPLine), 'PP'] = i
+    
+    #write to csv
+    allPlayerLines.to_csv("Data/PlayerLines.csv",index=False)
+    
+    
 # Execute functions
 currentSeason = fiscalyear.FiscalYear.current().fiscal_year
 pullPlayerStats(currentSeason,"skaters")
 pullPlayerStats(currentSeason,"goalies")
 getPlayerNames()
+getPlayerLines()
 mergeSeasonStats(currentSeason)

@@ -1,7 +1,8 @@
 function(input, output, session) {
   ## Initial data and function setup =================================
-  # Read in all players
+  # Read in all players and current lines
   playernames <<- read.csv("Data/PlayerNames.csv")
+  playerlines <<- read.csv("Data/PlayerLines.csv")
   
   # Get current season
   currentSeason <<- as.integer(lubridate::quarter(Sys.Date(), with_year = TRUE, fiscal_start = 10))
@@ -1000,7 +1001,7 @@ function(input, output, session) {
                  input$gsFP,input$winsFP,input$gaFP,input$savesFP,input$soFP,input$teamStatRange,
                  input$teamStatType),ignoreInit=T,{
     
-    # Get currently selected team
+    # Get currently chosen fantasy team
     team = teamGLOB_r$df
     
     # Create data table
@@ -1106,99 +1107,101 @@ function(input, output, session) {
       }
     }
     
+    # Replace NA/INF with 0
     teamSkaterData[,-c(1:2)][apply(teamSkaterData[,-c(1:2)],c(1,2),is.na)] = 0
     teamSkaterData[,-c(1:2)][apply(teamSkaterData[,-c(1:2)],c(1,2),is.infinite)] = 0
     teamGoalieData[,-c(1:2)][apply(teamGoalieData[,-c(1:2)],c(1,2),is.na)] = 0
     teamGoalieData[,-c(1:2)][apply(teamGoalieData[,-c(1:2)],c(1,2),is.infinite)] = 0
     
-    # Convert names to actionLinks
-    
-    teamSkaterData = setDT(teamSkaterData)
-    teamSkaterData$Row = 1:nrow(teamSkaterData)
-    teamSkaterData[, inputId := teamSkaterData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
-    teamGoalieData = setDT(teamGoalieData)
-    teamGoalieData$Row = (1+nrow(teamSkaterData)):(nrow(teamSkaterData)+nrow(teamGoalieData))
-    teamGoalieData[, inputId := teamGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
-
-    
-    # Reactable styling
-    skaterTableStyle <- function(value, index, name) {
-      normalized <- (value - min(teamSkaterData[[name]], na.rm = T)) /
-        (max(teamSkaterData[[name]], na.rm = T) - min(teamSkaterData[[name]], na.rm = T))
-      color <- GrnRedPalette(normalized)
-      list(background = color,fontWeight = 400,fontSize=14,width = 100)
-    }   
-    
-    # Skater table output
-    output$teamSkaterStats <- renderReactable({
-      reactable(
-        teamSkaterData,
-        defaultColDef = colDef(
-          cell = function(value) format(value, nsmall = 1),
-          align = "center",
-          headerStyle = list(background = "#e7e7e7",fontSize=16,width = 100),
-          style = skaterTableStyle,
-          html = T
-        ),
-        columns = list(
-          `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,width=100,background = "#FFFFFF"),
-                          headerStyle = list(background = "#e7e7e7",fontSize=16,width = 100),
+    #
+    if (nrow(teamSkaterData)>0) {
+      # Convert names to actionLinks
+      teamSkaterData = setDT(teamSkaterData)
+      teamSkaterData$Row = 1:nrow(teamSkaterData)
+      teamSkaterData[, inputId := teamSkaterData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
+      teamGoalieData = setDT(teamGoalieData)
+      teamGoalieData$Row = (1+nrow(teamSkaterData)):(nrow(teamSkaterData)+nrow(teamGoalieData))
+      teamGoalieData[, inputId := teamGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
+  
+      
+      # Reactable styling
+      skaterTableStyle <- function(value, index, name) {
+        normalized <- (value - min(teamSkaterData[[name]], na.rm = T)) /
+          (max(teamSkaterData[[name]], na.rm = T) - min(teamSkaterData[[name]], na.rm = T))
+        color <- GrnRedPalette(normalized)
+        list(background = color,fontWeight = 400,fontSize=14,width = 100)
+      }   
+      
+      # Skater table output
+      output$teamSkaterStats <- renderReactable({
+        reactable(
+          teamSkaterData,
+          defaultColDef = colDef(
+            cell = function(value) format(value, nsmall = 1),
+            align = "center",
+            headerStyle = list(background = "#f7f7f8",fontSize=16,width = 100),
+            style = skaterTableStyle,
+            html = T
+          ),
+          columns = list(
+            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,width=100,background = "#FFFFFF"),
+                            headerStyle = list(background = "#f7f7f8",fontSize=16,width = 100),
+                            sticky = "left"),
+            Name = colDef(style = list(fontWeight = 600,fontSize=14,width = 150,background = "#FFFFFF"),
+                          headerStyle = list(background = "#f7f7f8",fontSize=16,width = 150),
                           sticky = "left"),
-          Name = colDef(style = list(fontWeight = 600,fontSize=14,width = 150,background = "#FFFFFF"),
-                        headerStyle = list(background = "#e7e7e7",fontSize=16,width = 150),
-                        sticky = "left"),
-          Row = colDef(show=F)
-        ),
-        outlined = TRUE, 
-        borderless = TRUE,
-        highlight = TRUE,
-        defaultPageSize = 100,
-        fullWidth = T,
-        theme = reactableTheme(
-          backgroundColor = "rgba(0,0,0,0)"
+            Row = colDef(show=F)
+          ),
+          outlined = TRUE, 
+          borderless = TRUE,
+          highlight = TRUE,
+          defaultPageSize = 100,
+          fullWidth = T,
+          theme = reactableTheme(
+            backgroundColor = "rgba(0,0,0,0)"
+          )
         )
-      )
-    })
-    
-    # Reactable styling
-    goalieTableStyle <- function(value, index, name) {
-      normalized <- (value - min(teamGoalieData[[name]], na.rm = T)) /
-        (max(teamGoalieData[[name]], na.rm = T) - min(teamGoalieData[[name]], na.rm = T))
-      color <- GrnRedPalette(normalized)
-      list(background = color,fontWeight = 400,fontSize=14,maxWidth = 100)
-    }   
-    
-    # Goalie table output
-    output$teamGoalieStats <- renderReactable({
-      reactable(
-        teamGoalieData,
-        defaultColDef = colDef(
-          cell = function(value) format(value, nsmall = 1),
-          align = "center",
-          headerStyle = list(background = "#e7e7e7",fontSize=16,maxWidth=100),
-          style = goalieTableStyle,
-          html = T
-        ),
-        columns = list(
-          `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100,background = "#FFFFFF"),
-                          headerStyle = list(background = "#e7e7e7",fontSize=16,minWidth=100,maxWidth=100),
+      })
+      
+      # Reactable styling
+      goalieTableStyle <- function(value, index, name) {
+        normalized <- (value - min(teamGoalieData[[name]], na.rm = T)) /
+          (max(teamGoalieData[[name]], na.rm = T) - min(teamGoalieData[[name]], na.rm = T))
+        color <- GrnRedPalette(normalized)
+        list(background = color,fontWeight = 400,fontSize=14,maxWidth = 100)
+      }   
+      
+      # Goalie table output
+      output$teamGoalieStats <- renderReactable({
+        reactable(
+          teamGoalieData,
+          defaultColDef = colDef(
+            cell = function(value) format(value, nsmall = 1),
+            align = "center",
+            headerStyle = list(background = "#f7f7f8",fontSize=16,maxWidth=100),
+            style = goalieTableStyle,
+            html = T
+          ),
+          columns = list(
+            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100,background = "#FFFFFF"),
+                            headerStyle = list(background = "#f7f7f8",fontSize=16,minWidth=100,maxWidth=100),
+                            sticky = "left"),
+            Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=150,maxWidth=150,background = "#FFFFFF"),
+                          headerStyle = list(background = "#f7f7f8",fontSize=16,minWidth=150,maxWidth=150),
                           sticky = "left"),
-          Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=150,maxWidth=150,background = "#FFFFFF"),
-                        headerStyle = list(background = "#e7e7e7",fontSize=16,minWidth=150,maxWidth=150),
-                        sticky = "left"),
-          Row = colDef(show=F)
-        ),
-        outlined = TRUE, 
-        borderless = TRUE,
-        highlight = TRUE,
-        defaultPageSize = 100,
-        fullWidth = TRUE,
-        theme = reactableTheme(
-          backgroundColor = "rgba(0,0,0,0)"
+            Row = colDef(show=F)
+          ),
+          outlined = TRUE, 
+          borderless = TRUE,
+          highlight = TRUE,
+          defaultPageSize = 100,
+          fullWidth = TRUE,
+          theme = reactableTheme(
+            backgroundColor = "rgba(0,0,0,0)"
+          )
         )
-      )
-    })
-    
+      })
+    }
     
   })
   
