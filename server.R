@@ -53,12 +53,13 @@ function(input, output, session) {
         tempdata['Season'] = as.integer(substr(files[i], nchar(files[i])-7, nchar(files[i])-4))
         playerdata = rbind(playerdata,tempdata)
       }
+      colnames(playerdata)[4] = "Team"
       
       # Skaters
       if (playernames$Position[playernames$ID==playerID] != "G"){
         
         # Create season summary tables
-        tableData <<- playerdata[,c("G","Age","Tm",
+        tableData <<- playerdata[,c("G","Age","Team",
                                   "Scoring_G","Scoring_A","Scoring_PTS",
                                   "X...","Goals_EV","Goals_PP","Goals_SH",
                                   "Goals_GW","Assists_EV","Assists_PP",
@@ -68,7 +69,7 @@ function(input, output, session) {
         
         
         totalTable <<- tableData %>%
-          group_by(Season,Tm) %>%
+          group_by(Season,Team) %>%
           summarize(
             Age = max(Age,na.rm=T),
             GP = n(),
@@ -91,7 +92,7 @@ function(input, output, session) {
           arrange(desc(Season))
         
         averageTable <<- tableData %>%
-          group_by(Season,Tm) %>%
+          group_by(Season,Team) %>%
           summarize(
             Age = max(Age),
             GP = n(),
@@ -105,7 +106,7 @@ function(input, output, session) {
             `PP Assists` = sum(Assists_PP,na.rm=T)/n(),
             Shots = sum(S,na.rm=T)/n(),
             `Shot %` = 100*(sum(Scoring_G,na.rm=T)/sum(S,na.rm=T)),
-            `Avg FO %` = 100*sum(FOW,na.rm=T)/(sum(FOW,na.rm=T)+sum(FOL,na.rm=T)),
+            `FO %` = 100*sum(FOW,na.rm=T)/(sum(FOW,na.rm=T)+sum(FOL,na.rm=T)),
             FOW = sum(FOW,na.rm=T)/n(),
             PIM = sum(PIM,na.rm=T)/n(),
             Hits = sum(HIT,na.rm=T)/n(),
@@ -115,7 +116,7 @@ function(input, output, session) {
           arrange(desc(Season))
       
         per60Table <<- tableData %>%
-          group_by(Season,Tm) %>%
+          group_by(Season,Team) %>%
           summarize(
             Age = max(Age,na.rm=T),
             GP = n(),
@@ -184,14 +185,14 @@ function(input, output, session) {
       # Goalies
       } else {
         
-        tableData = playerdata[,c("G","Age","Tm","Result","DEC",
+        tableData = playerdata[,c("G","Age","Team","Result","DEC",
                                   "Goalie.Stats_GA","Goalie.Stats_SA",
                                   "Goalie.Stats_SV","Goalie.Stats_SV.",
                                   "Goalie.Stats_SO","Season"
                                   )]
         
         totalTable <<- tableData %>%
-          group_by(Season,Tm) %>%
+          group_by(Season,Team) %>%
           summarize(
             Age = max(Age,na.rm=T),
             GP = n(),
@@ -205,7 +206,7 @@ function(input, output, session) {
           arrange(desc(Season))
         
         averageTable <<- tableData %>%
-          group_by(Season,Tm) %>%
+          group_by(Season,Team) %>%
           summarize(
             Age = max(Age),
             GP = n(),
@@ -291,19 +292,19 @@ function(input, output, session) {
     normalized <- (value - min(totalTable[name], na.rm = T)) /
       (max(totalTable[name], na.rm = T) - min(totalTable[name], na.rm = T))
     color <- GrnRedPalette(normalized)
-    list(background = color)
+    list(background = color,fontWeight = 600,fontSize=14,minWidth = 80,maxWidth = 80)
   }      
   averageStyle <- function(value, index, name) {
     normalized <- (value - min(averageTable[name], na.rm = T)) /
       (max(averageTable[name], na.rm = T) - min(averageTable[name], na.rm = T))
     color <- GrnRedPalette(normalized)
-    list(background = color)
+    list(background = color,fontWeight = 600,fontSize=14,minWidth = 80,maxWidth = 80)
   }      
   per60Style <- function(value, index, name) {
     normalized <- (value - min(per60Table[name], na.rm = T)) /
       (max(per60Table[name], na.rm = T) - min(per60Table[name], na.rm = T))
     color <- GrnRedPalette(normalized)
-    list(background = color)
+    list(background = color,fontWeight = 600,fontSize=14,minWidth = 80,maxWidth = 80)
   }      
   
 
@@ -316,20 +317,40 @@ function(input, output, session) {
           defaultColDef = colDef(
             cell = function(value) format(value, nsmall = 1),
             align = "center",
-            minWidth = 50,
-            headerStyle = list(background = "#f7f7f8"),
-            style = totalStyle
+            width = 0,
+            headerStyle = list(background = "#deedf7",minWidth = 80,maxWidth = 80),
+            style = totalStyle,
+            vAlign ="center",
+            html = T
           ),
           columns = list(
-            Season = colDef(style = list()),
-            Tm = colDef(style = list()),
-            Age = colDef(style = list()),
-            GP = colDef(style = list()),
-            `Avg TOI (mins)` = colDef(style = list())
+            Season = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                            headerStyle = list(background = "#deedf7",minWidth=100,maxWidth=100),
+                            sticky = "left",vAlign ="center"),
+            Team = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=75,maxWidth=75),
+                        headerStyle = list(background = "#deedf7",minWidth=75,maxWidth=75),
+                        sticky = "left",vAlign ="center"),
+            Age = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=50,maxWidth=50),
+                         headerStyle = list(background = "#deedf7",minWidth=50,maxWidth=50),
+                         vAlign ="center"),
+            GP = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=50,maxWidth=50),
+                        headerStyle = list(background = "#deedf7",minWidth=50,maxWidth=50),
+                        vAlign ="center"),
+            `Avg TOI (mins)` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=75,maxWidth=75),
+                                      headerStyle = list(background = "#deedf7",minWidth=75,maxWidth=75),
+                                      vAlign ="center")
           ),
-          bordered = TRUE,
+          borderless = TRUE,
+          outline =TRUE,
           highlight = TRUE,
-          defaultPageSize = 20
+          striped =TRUE,
+          defaultPageSize = 100,
+          theme = reactableTheme(
+            style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                         ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                         ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+            backgroundColor = "#f6f8fc"
+          )
         )
       })
     } else if (input$seasonStatsType == "pg") {
@@ -339,21 +360,41 @@ function(input, output, session) {
           defaultColDef = colDef(
             cell = function(value) format(value, nsmall = 1),
             align = "center",
-            minWidth = 50,
-            headerStyle = list(background = "#f7f7f8"),
-            style = averageStyle
+            width = 0,
+            headerStyle = list(background = "#deedf7",minWidth = 80,maxWidth = 80),
+            style = averageStyle,
+            vAlign ="center"
           ),
           columns = list(
-            Season = colDef(style = list()),
-            Tm = colDef(style = list()),
-            Age = colDef(style = list()),
-            GP = colDef(style = list()),
-            `Avg TOI (mins)` = colDef(style = list()),
+            Season = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                            headerStyle = list(background = "#deedf7",minWidth=100,maxWidth=100),
+                            sticky = "left",vAlign ="center"),
+            Team = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=75,maxWidth=75),
+                          headerStyle = list(background = "#deedf7",minWidth=75,maxWidth=75),
+                          sticky = "left",vAlign ="center"),
+            Age = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=50,maxWidth=50),
+                         headerStyle = list(background = "#deedf7",minWidth=50,maxWidth=50),
+                         vAlign ="center"),
+            GP = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=50,maxWidth=50),
+                        headerStyle = list(background = "#deedf7",minWidth=50,maxWidth=50),
+                        vAlign ="center"),
+            `Avg TOI (mins)` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=75,maxWidth=75),
+                                      headerStyle = list(background = "#deedf7",minWidth=75,maxWidth=75),
+                                      vAlign ="center"),
             Goals = colDef(format = colFormat(digits = 2))
           ),
-          bordered = TRUE,
+          borderless = TRUE,
+          outline =TRUE,
           highlight = TRUE,
-          defaultPageSize = 20
+          striped =TRUE,
+          defaultPageSize = 100,
+          fullWidth = TRUE,
+          theme = reactableTheme(
+            style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                         ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                         ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+            backgroundColor = "#f6f8fc"
+          )
         )
       })  
     } else {
@@ -363,20 +404,40 @@ function(input, output, session) {
           defaultColDef = colDef(
             cell = function(value) format(value, nsmall = 1),
             align = "center",
-            minWidth = 50,
-            headerStyle = list(background = "#f7f7f8"),
-            style = per60Style
+            width = 0,
+            headerStyle = list(background = "#deedf7",minWidth = 80,maxWidth = 80),
+            style = per60Style,
+            vAlign ="center"
           ),
           columns = list(
-            Season = colDef(style = list()),
-            Tm = colDef(style = list()),
-            Age = colDef(style = list()),
-            GP = colDef(style = list()),
-            `Avg TOI (mins)` = colDef(style = list())
+            Season = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                            headerStyle = list(background = "#deedf7",minWidth=100,maxWidth=100),
+                            sticky = "left",vAlign ="center"),
+            Team = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=75,maxWidth=75),
+                          headerStyle = list(background = "#deedf7",minWidth=75,maxWidth=75),
+                          sticky = "left",vAlign ="center"),
+            Age = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=50,maxWidth=50),
+                         headerStyle = list(background = "#deedf7",minWidth=50,maxWidth=50),
+                         vAlign ="center"),
+            GP = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=50,maxWidth=50),
+                        headerStyle = list(background = "#deedf7",minWidth=50,maxWidth=50),
+                        vAlign ="center"),
+            `Avg TOI (mins)` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=75,maxWidth=75),
+                                      headerStyle = list(background = "#deedf7",minWidth=75,maxWidth=75),
+                                      vAlign ="center")
           ),
-          bordered = TRUE,
+          borderless = TRUE,
+          outline =TRUE,
           highlight = TRUE,
-          defaultPageSize = 20
+          striped =TRUE,
+          defaultPageSize = 100,
+          fullWidth = TRUE,
+          theme = reactableTheme(
+            style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                         ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                         ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+            backgroundColor = "#f6f8fc"
+          )
         )
       })
     }
@@ -716,19 +777,11 @@ function(input, output, session) {
       
     }
       
-      
-    
-    
+
   })
   
   
-  
-  
-  
-  
 
-  
-  
   
   
   ## Fantasy Team - Create/Upload ===============================
@@ -745,6 +798,10 @@ function(input, output, session) {
   allFantasySkaters <<- unique(rbind(skaterData[,c('ID','Name')],skaterDataLS[,c('ID','Name')]))
   allFantasyGoalies <<- unique(rbind(goalieData[,c('ID','Name')],goalieDataLS[,c('ID','Name')]))
 
+  # Get current player lines
+  skaterLines <<- read.csv("Data/playerLines.csv")
+  
+  
   #Initialize tracking variables
   numC_UI <- 0
   numLW_UI <- 0
@@ -756,101 +813,163 @@ function(input, output, session) {
   numRW <- reactive({as.numeric(input$numRW)})
   numD <- reactive({as.numeric(input$numD)})
   numG <- reactive({as.numeric(input$numG)})
+
   numC_d <- debounce(numC,100)
   numLW_d <- debounce(numLW,100)
   numRW_d <- debounce(numRW,100)
   numD_d <- debounce(numD,100)
   numG_d <- debounce(numG,100)
   
-  observeEvent(input$teamFileLoad,ignoreNULL = FALSE, priority=2,{
-    output$centers = renderUI({
-      if (numC_d() != numC_UI) {
-        numC_UI <<- numC_d()
-      }
-      return(lapply(1:numC_d(), function(i) {
-        column(width = floor(12/numC_d()),
-          selectizeInput(
-            paste0("C",i),
-            label = NULL,
-            choices = c("",sort(allFantasySkaters$Name)),
-            selected = ""
-          )
+  reactiveValue <- reactiveVal(0)
+  reactiveValue1_d <- debounce(reactive({reactiveValue()}), 100)
+  reactiveValue2_d <- debounce(reactive({reactiveValue()}), 1500)
+  
+  # Centers UI
+  output$centers = renderUI({
+    # Randomize this reactivevalue to trigger other observers
+    reactiveValue(runif(1))
+    return(lapply(1:numC_d(), function(i) {
+      column(width = floor(12/numC_d()),
+        selectizeInput(
+          paste0("C",i),
+          label = NULL,
+          choices = "",
+          selected = ""
         )
-      }))
-    })
+      )
+    }))
   })
   
-  observeEvent(input$teamFileLoad,ignoreNULL = FALSE, priority=2,{
-    output$leftwings = renderUI({
-      if (numLW_d() != numLW_UI) {
-        numLW_UI <<- numLW_d()
-      }
-      return(lapply(1:numLW_d(), function(i) {
-        column(width = floor(12/numLW_d()),
-          selectizeInput(
-            paste0("LW",i),
-            label = NULL,
-            choices = c("",sort(allFantasySkaters$Name)),
-            selected = ""
-          )
+  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
+    if (numC_d() != numC_UI) {
+      numC_UI <<- numC_d()
+    }
+    for (i in 1:numC_UI) {
+        updateSelectizeInput(
+          session,
+          paste0("C",i),
+          choices = c("",sort(allFantasySkaters$Name)),
+          server =T
         )
-      }))
-    })
+      }
   })
   
-  observeEvent(input$teamFileLoad,ignoreNULL = FALSE, priority=2,{
-    output$rightwings = renderUI({
-      if (numRW_d() != numRW_UI) {
-        numRW_UI <<- numRW_d()
-      }
-      return(lapply(1:numRW_d(), function(i) {
-        column(width = floor(12/numRW_d()),
-          selectizeInput(
-            paste0("RW",i),
-            label = NULL,
-            choices = c("",sort(allFantasySkaters$Name)),
-            selected = ""
-          )
-        )
-      }))
-    })
+  
+  # Left wings UI
+  output$leftwings = renderUI({
+    
+    return(lapply(1:numLW_d(), function(i) {
+      column(width = floor(12/numLW_d()),
+             selectizeInput(
+               paste0("LW",i),
+               label = NULL,
+               choices = "",
+               selected = ""
+             )
+      )
+    }))
   })
   
-  observeEvent(input$teamFileLoad,ignoreNULL = FALSE, priority=2,{
-    output$defensemen = renderUI({
+  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
+    if (numLW_d() != numLW_UI) {
+      numLW_UI <<- numLW_d()
+    }
+    for (i in 1:numLW_UI) {
+      updateSelectizeInput(
+        session,
+        paste0("LW",i),
+        choices = c("",sort(allFantasySkaters$Name)),
+        server =T
+      )
+    }
+  })
+  
+  # Right wings UI
+  output$rightwings = renderUI({
+    return(lapply(1:numRW_d(), function(i) {
+      column(width = floor(12/numRW_d()),
+             selectizeInput(
+               paste0("RW",i),
+               label = NULL,
+               choices = "",
+               selected = ""
+             )
+      )
+    }))
+  })
+  
+  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
+    if (numRW_d() != numRW_UI) {
+      numRW_UI <<- numRW_d()
+    }
+    
+    for (i in 1:numRW_UI) {
+      updateSelectizeInput(
+        session,
+        paste0("RW",i),
+        choices = c("",sort(allFantasySkaters$Name)),
+        server =T
+      )
+    }
+  })
+  
+  # Defensemen  UI
+  output$defensemen = renderUI({
+    return(lapply(1:numD_d(), function(i) {
+      column(width = floor(12/numD_d()),
+             selectizeInput(
+               paste0("D",i),
+               label = NULL,
+               choices = "",
+               selected = ""
+             )
+      )
+    }))
+  })
+  
+  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
+    for (i in 1:numD_UI) {
       if (numD_d() != numD_UI) {
         numD_UI <<- numD_d()
       }
-      return(lapply(1:numD_d(), function(i) {
-        column(width = floor(12/numD_d()),
-          selectizeInput(
-            paste0("D",i),
-            label = NULL,
-            choices = c("",sort(allFantasySkaters$Name)),
-            selected = ""
-          )
-        )
-      }))
-    })
+      updateSelectizeInput(
+        session,
+        paste0("D",i),
+        choices = c("",sort(allFantasySkaters$Name)),
+        server =T
+      )
+    }
   })
   
-  observeEvent(input$teamFileLoad,ignoreNULL = FALSE, priority=2,{
-    output$goalies = renderUI({
-      if (numG_d() != numG_UI) {
-        numG_UI <<- numG_d()
-      }
-      return(lapply(1:numG_d(), function(i) {
-        column(width = floor(12/numG_d()),
-          selectizeInput(
-            paste0("G",i),
-            label = NULL,
-            choices = c("",sort(allFantasyGoalies$Name)),
-            selected = ""
-          )
-        )
-      }))
-    })
+  # Goalies  UI
+  output$goalies = renderUI({
+    return(lapply(1:numG_d(), function(i) {
+      column(width = floor(12/numG_d()),
+             selectizeInput(
+               paste0("G",i),
+               label = NULL,
+               choices = "",
+               selected = ""
+             )
+      )
+    }))
   })
+  
+  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
+    if (numG_d() != numG_UI) {
+      numG_UI <<- numG_d()
+    }
+    for (i in 1:numG_UI) {
+      updateSelectizeInput(
+        session,
+        paste0("G",i),
+        choices = c("",sort(allFantasyGoalies$Name)),
+        server =T
+      )
+    }
+  })
+  
+  
   
   # Dynamically update global team dataframe
   teamGLOB_r = reactiveValues() 
@@ -919,7 +1038,6 @@ function(input, output, session) {
         }
       }
     }
-    
     team = team[-1,]
     teamGLOB <<- team
     teamGLOB_r$df = teamGLOB
@@ -939,7 +1057,7 @@ function(input, output, session) {
   
   
   # Load team from csv file
-  observeEvent(input$teamFileLoad,priority = 3, {
+  observeEvent(input$teamFileLoad,priority = 4, {
     filePath = input$teamFileLoad
     teamGLOB <<- read.csv(filePath$datapath)
     teamGLOB_r$df  = teamGLOB
@@ -958,39 +1076,43 @@ function(input, output, session) {
   })
   
   # fill in player names
-  observe(priority = 1, {
-    # add these to trigger the observer
-    numLW_d()
-    numC_d()
-    numRW_d()
-    numD_d()
-    numG_d()
-    
+  observeEvent(c(reactiveValue2_d()), priority = 2, {
+
     if (exists("teamGLOB")) {
       for (i in 1:numLW_d()) {
         updateSelectizeInput(session,
                              paste0("LW",i),
-                             selected = teamGLOB$Name[teamGLOB$Position=="LW"][i])
+                             selected = teamGLOB$Name[teamGLOB$Position=="LW"][i],
+                             choices = c("",sort(allFantasySkaters$Name)),
+                             server =T)
       }
       for (i in 1:numC_d()) {
         updateSelectizeInput(session,
                              paste0("C",i),
-                             selected = teamGLOB$Name[teamGLOB$Position=="C"][i])
+                             selected = teamGLOB$Name[teamGLOB$Position=="C"][i],
+                             choices = c("",sort(allFantasySkaters$Name)),
+                             server =T)
       }
       for (i in 1:numRW_d()) {
         updateSelectizeInput(session,
                              paste0("RW",i),
-                             selected = teamGLOB$Name[teamGLOB$Position=="RW"][i])
+                             selected = teamGLOB$Name[teamGLOB$Position=="RW"][i],
+                             choices = c("",sort(allFantasySkaters$Name)),
+                             server =T)
       }
       for (i in 1:numD_d()) {
         updateSelectizeInput(session,
                              paste0("D",i),
-                             selected = teamGLOB$Name[teamGLOB$Position=="D"][i])
+                             selected = teamGLOB$Name[teamGLOB$Position=="D"][i],
+                             choices = c("",sort(allFantasySkaters$Name)),
+                             server =T)
       }
       for (i in 1:numG_d()) {
         updateSelectizeInput(session,
                              paste0("G",i),
-                             selected = teamGLOB$Name[teamGLOB$Position=="G"][i])
+                             selected = teamGLOB$Name[teamGLOB$Position=="G"][i],
+                             choices = c("",sort(allFantasyGoalies$Name)),
+                             server =T)
       }
     }
   })
@@ -1005,7 +1127,7 @@ function(input, output, session) {
     team = teamGLOB_r$df
     
     # Create data table
-    teamSkaterData = as.data.frame(matrix(ncol=13,nrow=0))
+    teamSkaterData = as.data.frame(matrix(ncol=17,nrow=0))
     teamGoalieData = as.data.frame(matrix(ncol=8,nrow=0))
     if (nrow(team)>0){
       for (i in 1:nrow(team)) {
@@ -1015,13 +1137,18 @@ function(input, output, session) {
           playerID = team$ID[i]
           if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))) {
             playerData = read.csv(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))
+            playerTeam = playerData$Tm[nrow(playerData)]
           } else {
             playerData = read.csv(paste0("Data/Players/dummyfileskater.csv"))[-1,]
+            playerTeam = ""
           }
+          
           if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
             playerDataLS = read.csv(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))
+            playerTeamLS = playerDataLS$Tm[nrow(playerDataLS)]
           } else {
             playerDataLS = read.csv(paste0("Data/Players/dummyfileskater.csv"))[-1,]
+            playerTeamLS = ""
           }
           
           # Format dates
@@ -1031,6 +1158,7 @@ function(input, output, session) {
           # Filter based on chosen date range if needed
           if (input$teamStatRange == "ls") {
             playerData = playerDataLS
+            playerTeam = playerTeamLS
           } else if (input$teamStatRange != "s") {
             playerData = playerData[playerData$Date > today()-as.numeric(input$teamStatRange),]
           }
@@ -1038,20 +1166,48 @@ function(input, output, session) {
           
           # Get stat totals
           playerData = playerData %>%
-            summarise(GP = nrow(playerData),Goals = sum(Scoring_G),Assists = sum(Scoring_A),Points = sum(Scoring_PTS),PPP = sum(Goals_PP)+sum(Assists_PP),
-                      SHP = sum(Goals_SH)+sum(Assists_SH),Shots = sum(S),Hits = sum(HIT),Blocks = sum(BLK),FOW = sum(FOW))
-          playerData = cbind(Pos. = team$Position[i],Name = team$Name[i],`Fantasy Points` = NA,playerData)
+            summarise(GP = nrow(playerData),
+                      Goals = sum(Scoring_G),
+                      Assists = sum(Scoring_A),
+                      Points = sum(Scoring_PTS),
+                      PPP = sum(Goals_PP)+sum(Assists_PP),
+                      SHP = sum(Goals_SH)+sum(Assists_SH),
+                      Shots = sum(S),Hits = sum(HIT),
+                      Blocks = sum(BLK),
+                      FOW = sum(FOW))
+          
+          # Append line #/pp line #
+          lineData = data.frame()
+          if (team$Name[i] %in% playerlines$Player) {
+            lineData[1,"Linemate 1"] = playerlines$Linemate1[playerlines$Player == team$Name[i]]
+            lineData[1,"Linemate 2"] = playerlines$Linemate2[playerlines$Player == team$Name[i]]
+            lineData[1,"Line"] = ordinal(playerlines$Line[playerlines$Player == team$Name[i]])
+            lineData[1,"PP Line"] = ordinal(playerlines$PP[playerlines$Player == team$Name[i]])
+            
+          } else {
+            lineData[1,"Linemate 1"] = "<i>Unknown</i>"
+            lineData[1,"Linemate 2"] = "<i>Unknown</i>"
+            lineData[1,"Line"] = "<i>NA</i>"
+            lineData[1,"PP Line"] = "<i>NA</i>"
+          }
+          
+          # Append/merge all info
+          playerData = cbind(Pos. = team$Position[i],
+                             Name = paste0(team$Name[i]," (",playerTeam,")"),
+                             lineData,
+                             `FT PTS` = NA,
+                             playerData)
           
           
           # Calculate fantasy points
-          playerData$`Fantasy Points` = input$goalsFP*playerData$Goals + input$assistsFP*playerData$Assists +
+          playerData$`FT PTS` = input$goalsFP*playerData$Goals + input$assistsFP*playerData$Assists +
             input$pointsFP*playerData$Points + input$pppFP*playerData$PPP + input$shFP*playerData$SHP + 
             input$shotsFP*playerData$Shots + input$blocksFP*playerData$Blocks + input$hitsFP*playerData$Hits +
             input$fowFP*playerData$FOW
           
           # Calc per game stats if needed
           if (input$teamStatType =="pg") {
-            playerData[,-c(1,2,4)] = round(playerData[,-c(1,2,4)]/playerData$GP,2)
+            playerData[,-c(1:6,8)] = round(playerData[,-c(1:6,8)]/playerData$GP,2)
           }
           
           # Append player data to team table
@@ -1064,13 +1220,18 @@ function(input, output, session) {
           playerID = team$ID[i]
           if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))) {
             playerData = read.csv(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))
+            playerTeam = playerData$Tm[nrow(playerData)]
           } else {
             playerData = read.csv(paste0("Data/Players/dummyfilegoalie.csv"))[-1,]
+            playerTeam = ""
+            
           }
           if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
             playerDataLS = read.csv(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))
+            playerTeamLS = playerDataLS$Tm[nrow(playerDataLS)]
           } else {
             playerDataLS = read.csv(paste0("Data/Players/dummyfilegoalie.csv"))[-1,]
+            playerTeamLS = ""
           }
           
           # Format dates
@@ -1080,17 +1241,26 @@ function(input, output, session) {
           # Filter based on chosen date range if needed
           if (input$teamStatRange == "ls") {
             playerData = playerDataLS
+            playerTeam = playerTeamLS
           } else if (input$teamStatRange != "s") {
             playerData = playerData[playerData$Date > today()-as.numeric(input$teamStatRange),]
           }
           
           # Get stat totals
           playerData = playerData %>%
-            summarize(GP = max(G), Wins = sum(playerData$DEC=='W'),Shutouts = sum(Goalie.Stats_SO),Saves = sum(Goalie.Stats_SV),GA = sum(Goalie.Stats_GA))
-          playerData = cbind(Pos. = team$Position[i],Name = team$Name[i],`Fantasy Points` = NA,playerData)
+            summarize(GP = max(G), 
+                      Wins = sum(playerData$DEC=='W'),
+                      Shutouts = sum(Goalie.Stats_SO),
+                      Saves = sum(Goalie.Stats_SV),
+                      GA = sum(Goalie.Stats_GA))
+          playerData = cbind(Pos. = team$Position[i],
+                             Name = paste0(team$Name[i]," (",playerTeam,")"),
+                             `FT PTS` = NA,
+                             playerData)
+          
           
           # Calculate fantasy points
-          playerData$`Fantasy Points` = input$gsFP*playerData$GP + input$winsFP*playerData$Wins +
+          playerData$`FT PTS` = input$gsFP*playerData$GP + input$winsFP*playerData$Wins +
             input$savesFP*playerData$Saves + input$soFP*playerData$Shutouts + input$gaFP*playerData$GA
           
           # Calc per game stats if needed
@@ -1108,28 +1278,24 @@ function(input, output, session) {
     }
     
     # Replace NA/INF with 0
-    teamSkaterData[,-c(1:2)][apply(teamSkaterData[,-c(1:2)],c(1,2),is.na)] = 0
-    teamSkaterData[,-c(1:2)][apply(teamSkaterData[,-c(1:2)],c(1,2),is.infinite)] = 0
-    teamGoalieData[,-c(1:2)][apply(teamGoalieData[,-c(1:2)],c(1,2),is.na)] = 0
-    teamGoalieData[,-c(1:2)][apply(teamGoalieData[,-c(1:2)],c(1,2),is.infinite)] = 0
+    teamSkaterData[,-c(1:6)][apply(teamSkaterData[,-c(1:6)],c(1,2),is.na)] = 0
+    teamSkaterData[,-c(1:6)][apply(teamSkaterData[,-c(1:6)],c(1,2),is.infinite)] = 0
+    teamGoalieData[,-c(1:6)][apply(teamGoalieData[,-c(1:6)],c(1,2),is.na)] = 0
+    teamGoalieData[,-c(1:6)][apply(teamGoalieData[,-c(1:6)],c(1,2),is.infinite)] = 0
     
-    #
+    # Skater reactable
     if (nrow(teamSkaterData)>0) {
       # Convert names to actionLinks
       teamSkaterData = setDT(teamSkaterData)
       teamSkaterData$Row = 1:nrow(teamSkaterData)
       teamSkaterData[, inputId := teamSkaterData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
-      teamGoalieData = setDT(teamGoalieData)
-      teamGoalieData$Row = (1+nrow(teamSkaterData)):(nrow(teamSkaterData)+nrow(teamGoalieData))
-      teamGoalieData[, inputId := teamGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
-  
-      
+
       # Reactable styling
       skaterTableStyle <- function(value, index, name) {
         normalized <- (value - min(teamSkaterData[[name]], na.rm = T)) /
           (max(teamSkaterData[[name]], na.rm = T) - min(teamSkaterData[[name]], na.rm = T))
         color <- GrnRedPalette(normalized)
-        list(background = color,fontWeight = 400,fontSize=14,width = 100)
+        list(background = color,fontWeight = 600,fontSize=14,minWidth = 75,maxWidth = 75)
       }   
       
       # Skater table output
@@ -1139,36 +1305,63 @@ function(input, output, session) {
           defaultColDef = colDef(
             cell = function(value) format(value, nsmall = 1),
             align = "center",
-            headerStyle = list(background = "#f7f7f8",fontSize=16,width = 100),
+            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
             style = skaterTableStyle,
-            html = T
+            width = 0,
+            html = T,
+            vAlign ="center"
           ),
           columns = list(
-            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,width=100,background = "#FFFFFF"),
-                            headerStyle = list(background = "#f7f7f8",fontSize=16,width = 100),
-                            sticky = "left"),
-            Name = colDef(style = list(fontWeight = 600,fontSize=14,width = 150,background = "#FFFFFF"),
-                          headerStyle = list(background = "#f7f7f8",fontSize=16,width = 150),
-                          sticky = "left"),
+            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 100,maxWidth = 100),
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 100,maxWidth = 100),
+                            sticky = "left",vAlign ="center"),
+            Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 200,maxWidth = 200),
+                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 200,maxWidth = 200),
+                          sticky = "left",vAlign ="center"),
+            `Linemate 1` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 150,maxWidth = 150),
+                                  headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 150,maxWidth = 150),
+                                  vAlign ="center"),
+            `Linemate 2` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 150,maxWidth = 150),
+                                  headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 150,maxWidth = 150),
+                                  vAlign ="center"),
+            `Line` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
+                              vAlign ="center"),
+            `PP Line` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+                                  headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
+                                 vAlign ="center"),
             Row = colDef(show=F)
           ),
           outlined = TRUE, 
           borderless = TRUE,
           highlight = TRUE,
+          striped = TRUE,
           defaultPageSize = 100,
           fullWidth = T,
           theme = reactableTheme(
-            backgroundColor = "rgba(0,0,0,0)"
+            style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                         ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                         ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+            backgroundColor = "#f6f8fc"
           )
         )
       })
+      
+      
+    }
+    # Goalie reactable
+    if (nrow(teamGoalieData)>0) {
+      teamGoalieData = setDT(teamGoalieData)
+      teamGoalieData$Row = (1+nrow(teamSkaterData)):(nrow(teamSkaterData)+nrow(teamGoalieData))
+      teamGoalieData[, inputId := teamGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
+      
       
       # Reactable styling
       goalieTableStyle <- function(value, index, name) {
         normalized <- (value - min(teamGoalieData[[name]], na.rm = T)) /
           (max(teamGoalieData[[name]], na.rm = T) - min(teamGoalieData[[name]], na.rm = T))
         color <- GrnRedPalette(normalized)
-        list(background = color,fontWeight = 400,fontSize=14,maxWidth = 100)
+        list(background = color,fontWeight = 600,fontSize=14,minWidth = 75, maxWidth = 75)
       }   
       
       # Goalie table output
@@ -1178,30 +1371,38 @@ function(input, output, session) {
           defaultColDef = colDef(
             cell = function(value) format(value, nsmall = 1),
             align = "center",
-            headerStyle = list(background = "#f7f7f8",fontSize=16,maxWidth=100),
+            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75, maxWidth=75),
             style = goalieTableStyle,
-            html = T
+            maxWidth = 1000,
+            html = T,
+            vAlign ="center"
           ),
           columns = list(
-            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100,background = "#FFFFFF"),
-                            headerStyle = list(background = "#f7f7f8",fontSize=16,minWidth=100,maxWidth=100),
-                            sticky = "left"),
-            Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=150,maxWidth=150,background = "#FFFFFF"),
-                          headerStyle = list(background = "#f7f7f8",fontSize=16,minWidth=150,maxWidth=150),
-                          sticky = "left"),
+            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
+                            sticky = "left",vAlign ="center"),
+            Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=200,maxWidth=200),
+                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth=200,maxWidth=200),
+                          sticky = "left",vAlign ="center"),
             Row = colDef(show=F)
           ),
           outlined = TRUE, 
           borderless = TRUE,
           highlight = TRUE,
           defaultPageSize = 100,
-          fullWidth = TRUE,
+          striped= T,
+          fullWidth = T,
           theme = reactableTheme(
-            backgroundColor = "rgba(0,0,0,0)"
+            style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                         ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                         ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+            backgroundColor = "#f6f8fc"
           )
         )
       })
+      
     }
+    
     
   })
   
@@ -1210,7 +1411,7 @@ function(input, output, session) {
     if (input$playerclick != 0) {
       shinyjs::runjs("window.scrollTo(0, 0)")
       updateTabItems(session,'tabs',selected = 'playerstats')
-      updateSelectizeInput(session,'playerInput',choices = playernames$Name,selected = teamGLOB$Name[input$playerclick])
+      updateSelectizeInput(session,'playerInput',choices = playernames$Name,selected = teamGLOB$Name[input$playerclick],server=T)
     
       }
   })

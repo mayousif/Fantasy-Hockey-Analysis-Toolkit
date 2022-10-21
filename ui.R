@@ -175,8 +175,15 @@ body <- dashboardBody(
             column(width = 3,align="center",
               fileInput(
                 "teamFileLoad",
-                label = h1("Load Team From .csv File"),
+                label = h1("Load Team"),
                 accept = ".csv"
+              ),
+              br(),
+              h1("Save Team"),
+              downloadButton(
+                "teamFileSave",
+                label = "Save",
+                icon = icon(lib="glyphicon", "download-alt")
               )
             ),
             column(width=6,align="center",
@@ -204,12 +211,7 @@ body <- dashboardBody(
               )
             ),
             column(width=3,align="center",
-              h1("Save Team to .csv File"),
-              downloadButton(
-                "teamFileSave",
-                label = "Save",
-                icon = icon(lib="glyphicon", "download-alt")
-              )
+              
             )
           ),
           fluidRow(
@@ -245,51 +247,7 @@ body <- dashboardBody(
           )
         
           
-        ),
-        box(
-          id = "teamstatsbox",
-          width = 12,
-          title = h4("Team Stats"),
-          solidHeader=T,
-          status = "primary",
-          collapsible = TRUE,
-          collapsed = FALSE,
-          fluidRow(
-            column(width = 3, align = "center",
-              radioGroupButtons("teamStatType",
-                                label = h2("Stat Type"),
-                                choices = c("Total" = "tot",
-                                            "Per Game" = "pg"),
-                                selected = "tot",
-                                status = "primary")
-            ),
-            column(width = 3, align = "center",
-              selectInput("teamStatRange",
-                          label = h2("Filter Period"),
-                          choices = c("Last Season" = "ls",
-                                      "Current Season" = "s",
-                                      "Last 30 Days" = 30,
-                                      "Last 14 Days" = 14,
-                                      "Last 7 Days" = 7),
-                          selected = "s")
-            )
-          ),
-          reactableOutput("teamSkaterStats"),
-          reactableOutput("teamGoalieStats")
-          
-          
-        ),
-        box(
-          id = "testbox",
-          width = 12,
-          title = h1("Test"),
-          solidHeader=T,
-          status = "primary",
-          collapsible = TRUE,
-          collapsed = FALSE
         )
-        
-        
       ),
       column(width = 3,
         box(
@@ -435,6 +393,48 @@ body <- dashboardBody(
               )
             )
           )
+        )
+      ),
+      column(width = 12,
+        box(
+          id = "teamstatsbox",
+          width = 12,
+          title = h4("Team Stats"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE,
+          fluidRow(
+            column(width = 3, align = "center",
+                  radioGroupButtons("teamStatType",
+                                    label = h2("Stat Type"),
+                                    choices = c("Total" = "tot",
+                                                "Per Game" = "pg"),
+                                    selected = "tot",
+                                    status = "primary")
+            ),
+            column(width = 3, align = "center",
+                    selectInput("teamStatRange",
+                                label = h2("Filter Period"),
+                                choices = c("Last Season" = "ls",
+                                            "Current Season" = "s",
+                                            "Last 30 Days" = 30,
+                                            "Last 14 Days" = 14,
+                                            "Last 7 Days" = 7),
+                                selected = "s")
+            )
+          ),
+          reactableOutput("teamSkaterStats"),
+          reactableOutput("teamGoalieStats")
+        ),
+        box(
+          id = "testbox",
+          width = 12,
+          title = h1("Test"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE
         )
       )
     )
