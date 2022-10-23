@@ -1,11 +1,5 @@
 function(input, output, session) {
-  ## Initial data and function setup =================================
-  # Read in all players and current lines
-  playernames <<- read.csv("Data/PlayerNames.csv")
-  playerlines <<- read.csv("Data/PlayerLines.csv")
-  
-  # Get current season
-  currentSeason <<- as.integer(lubridate::quarter(Sys.Date(), with_year = TRUE, fiscal_start = 10))
+  ## Initial setup =================================
 
   # Colour map for conditional formatting
   GrnRedPalette <- function(x){
@@ -803,29 +797,37 @@ function(input, output, session) {
   
   
   #Initialize tracking variables
-  numC_UI <- 0
-  numLW_UI <- 0
-  numRW_UI <- 0
-  numD_UI <- 0
-  numG_UI <- 0
-  numC <- reactive({as.numeric(input$numC)})
-  numLW <- reactive({as.numeric(input$numLW)})
-  numRW <- reactive({as.numeric(input$numRW)})
-  numD <- reactive({as.numeric(input$numD)})
-  numG <- reactive({as.numeric(input$numG)})
-
-  numC_d <- debounce(numC,100)
-  numLW_d <- debounce(numLW,100)
-  numRW_d <- debounce(numRW,100)
-  numD_d <- debounce(numD,100)
-  numG_d <- debounce(numG,100)
+  numC_UI = 0
+  numLW_UI = 0
+  numRW_UI = 0
+  numD_UI = 0
+  numG_UI = 0
+  numUtil_UI = 0
   
-  reactiveValue <- reactiveVal(0)
-  reactiveValue1_d <- debounce(reactive({reactiveValue()}), 100)
-  reactiveValue2_d <- debounce(reactive({reactiveValue()}), 1500)
+  numC = reactive({as.numeric(input$numC)})
+  numLW = reactive({as.numeric(input$numLW)})
+  numRW = reactive({as.numeric(input$numRW)})
+  numD = reactive({as.numeric(input$numD)})
+  numG = reactive({as.numeric(input$numG)})
+  numUtil = reactive({as.numeric(input$numUtil)})
+
+  numC_d = debounce(numC,100)
+  numLW_d = debounce(numLW,100)
+  numRW_d = debounce(numRW,100)
+  numD_d = debounce(numD,100)
+  numG_d = debounce(numG,100)
+  numUtil_d = debounce(numUtil,100)
+  
+  reactiveValue = reactiveVal(0)
+  reactiveValue1_d = debounce(reactive({reactiveValue()}), 100)
+  reactiveValue2_d = debounce(reactive({reactiveValue()}), 500)
+  
+  updateTeamRV = reactiveVal(0)
+  updateTeamRV_d = debounce(reactive({updateTeamRV()}), 500)
   
   # Centers UI
   output$centers = renderUI({
+    print(2)
     # Randomize this reactivevalue to trigger other observers
     reactiveValue(runif(1))
     return(lapply(1:numC_d(), function(i) {
@@ -969,79 +971,135 @@ function(input, output, session) {
     }
   })
   
+  # Util UI
+  output$util = renderUI({
+    return(lapply(1:numUtil_d(), function(i) {
+      column(width = floor(12/numUtil_d()),
+             selectizeInput(
+               paste0("Util",i),
+               label = NULL,
+               choices = "",
+               selected = ""
+             )
+      )
+    }))
+  })
+  
+  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
+    if (numUtil_d() != numUtil_UI) {
+      numUtil_UI <<- numUtil_d()
+    }
+    for (i in 1:numUtil_UI) {
+      updateSelectizeInput(
+        session,
+        paste0("Util",i),
+        choices = c("",sort(allFantasySkaters$Name)),
+        server =T
+      )
+    }
+  })
   
   
   # Dynamically update global team dataframe
+  observeEvent(c(input$C1,input$C2,input$C3,input$C4,input$C5,input$C6,input$C7,
+                 input$LW1,input$LW2,input$LW3,input$LW4,input$LW5,input$LW6,input$LW7,
+                 input$RW1,input$RW2,input$RW3,input$RW4,input$RW5,input$RW6,input$RW7,
+                 input$D1,input$D2,input$D3,input$D4,input$D5,input$D6,input$D7,
+                 input$G1,input$G2,input$G3,input$G4,input$G5,input$G6,input$G7,
+                 input$Util1,input$Util2,input$Util3,input$Util4,input$Util5,input$Util6,input$Util7),{
+    updateTeamRV(runif(1))
+    
+  })
+  
   teamGLOB_r = reactiveValues() 
-  observe({
-    # compile team members into one dataframe
-    team = as.data.frame(matrix(ncol=3))
-    colnames(team) = c("ID","Name","Position")
-    
-
-    # append centers
-    for (i in 1:numC_UI) {
-      playerName = input[[paste0("C",i)]]
-      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
-      if (!is.null(playerName)) {
-        if (!playerName=="") {
-          team = rbind(team,c(playerID,playerName,"C"))
-        }
-      }
-    }
-    
-    # append left wingers
-    for (i in 1:numLW_UI) {
+  observeEvent(updateTeamRV_d(),{
+    isolate({
+      print(4)
+      print(updateTeamRV_d())
+      # compile team members into one dataframe
+      team = as.data.frame(matrix(ncol=3))
+      colnames(team) = c("ID","Name","Position")
       
-      playerName = input[[paste0("LW",i)]]
-      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
-      if (!is.null(playerName)) {
-        if (!playerName=="") {
-          team = rbind(team,c(playerID,playerName,"LW"))
+  
+      # append centers
+      for (i in 1:numC_UI) {
+        playerName = input[[paste0("C",i)]]
+        playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
+        if (!is.null(playerName)) {
+          if (!playerName=="") {
+            team = rbind(team,c(playerID,playerName,"C"))
+          }
         }
       }
-    }    
-    
-    # append right wingers
-    for (i in 1:numRW_UI) {
       
-      playerName = input[[paste0("RW",i)]]
-      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
-      if (!is.null(playerName)) {
-        if (!playerName=="") {
-          team = rbind(team,c(playerID,playerName,"RW"))
-        }
-      }
-    }        
-    
+      # append left wingers
+      for (i in 1:numLW_UI) {
         
-    # append defensemen
-    for (i in 1:numD_UI) {
+        playerName = input[[paste0("LW",i)]]
+        playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
+        if (!is.null(playerName)) {
+          if (!playerName=="") {
+            team = rbind(team,c(playerID,playerName,"LW"))
+          }
+        }
+      }    
       
-      playerName = input[[paste0("D",i)]]
-      playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
-      if (!is.null(playerName)) {
-        if (!playerName=="") {
-          team = rbind(team,c(playerID,playerName,"D"))
+      # append right wingers
+      for (i in 1:numRW_UI) {
+        
+        playerName = input[[paste0("RW",i)]]
+        playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
+        if (!is.null(playerName)) {
+          if (!playerName=="") {
+            team = rbind(team,c(playerID,playerName,"RW"))
+          }
+        }
+      }        
+      
+          
+      # append defensemen
+      for (i in 1:numD_UI) {
+        
+        playerName = input[[paste0("D",i)]]
+        playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
+        if (!is.null(playerName)) {
+          if (!playerName=="") {
+            team = rbind(team,c(playerID,playerName,"D"))
+          }
+        }
+      }    
+      
+      # append util
+      for (i in 1:numUtil_UI) {
+        
+        playerName = input[[paste0("Util",i)]]
+        playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
+        if (!is.null(playerName)) {
+          if (!playerName=="") {
+            team = rbind(team,c(playerID,playerName,"Util"))
+          }
         }
       }
-    }    
-    
-    # append goalies
-    for (i in 1:numG_UI) {
       
-      playerName = input[[paste0("G",i)]]
-      playerID = allFantasyGoalies$ID[allFantasyGoalies$Name == playerName]
-      if (!is.null(playerName)) {
-        if (!playerName=="") {
-          team = rbind(team,c(playerID,playerName,"G"))
+      # append goalies
+      for (i in 1:numG_UI) {
+        
+        playerName = input[[paste0("G",i)]]
+        playerID = allFantasyGoalies$ID[allFantasyGoalies$Name == playerName]
+        if (!is.null(playerName)) {
+          if (!playerName=="") {
+            team = rbind(team,c(playerID,playerName,"G"))
+          }
         }
       }
-    }
-    team = team[-1,]
-    teamGLOB <<- team
-    teamGLOB_r$df = teamGLOB
-    
+      
+
+      
+      # Update team df
+      team = team[-1,]
+      teamGLOB <<- team
+      teamGLOB_r$df = teamGLOB
+    })
   })
   
   # Save selected team to csv file
@@ -1055,7 +1113,6 @@ function(input, output, session) {
   )
   
   
-  
   # Load team from csv file
   observeEvent(input$teamFileLoad,priority = 4, {
     filePath = input$teamFileLoad
@@ -1067,17 +1124,55 @@ function(input, output, session) {
     updateSelectInput(session,"numC",selected ="0")
     updateSelectInput(session,"numRW",selected ="0")
     updateSelectInput(session,"numD",selected ="0")
+    updateSelectInput(session,"numUtil",selected ="0")
     updateSelectInput(session,"numG",selected ="0")
     updateSelectInput(session,"numLW",selected =as.character(sum(teamGLOB$Position=="LW")))
     updateSelectInput(session,"numC",selected =as.character(sum(teamGLOB$Position=="C")))
     updateSelectInput(session,"numRW",selected =as.character(sum(teamGLOB$Position=="RW")))
     updateSelectInput(session,"numD",selected =as.character(sum(teamGLOB$Position=="D")))
+    updateSelectInput(session,"numUtil",selected =as.character(sum(teamGLOB$Position=="Util")))
     updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
   })
   
+  # Load team from league
+  observeEvent(input$leagueTeam, {
+    if (input$leagueTeam != ""){
+      
+      print(1)
+      
+      team = data.frame()
+      team[1:nrow(leaguerosters),'Name'] = leaguerosters$player_name_full
+      team$Position = leaguerosters$selected_position_position
+      team = left_join(team, playernames[,c('Name','ID')],by = 'Name')
+      team = team[leaguerosters$team_name==input$leagueTeam,]
+      team = team[,c("Name","Position","ID")]
+      teamGLOB <<- team
+      teamGLOB_r$df  = teamGLOB
+      
+      # Update team composition filters
+      updateSelectInput(session,"numLW",selected ="0")
+      updateSelectInput(session,"numC",selected ="0")
+      updateSelectInput(session,"numRW",selected ="0")
+      updateSelectInput(session,"numD",selected ="0")
+      updateSelectInput(session,"numUtil",selected ="0")
+      updateSelectInput(session,"numG",selected ="0")
+      updateSelectInput(session,"numLW",selected =as.character(sum(teamGLOB$Position=="LW")))
+      updateSelectInput(session,"numC",selected =as.character(sum(teamGLOB$Position=="C")))
+      updateSelectInput(session,"numRW",selected =as.character(sum(teamGLOB$Position=="RW")))
+      updateSelectInput(session,"numD",selected =as.character(sum(teamGLOB$Position=="D")))
+      updateSelectInput(session,"numUtil",selected =as.character(sum(teamGLOB$Position=="Util")))
+      updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
+      
+    }
+    
+  })
+  
+  
+  
   # fill in player names
   observeEvent(c(reactiveValue2_d()), priority = 2, {
-
+    print(3)
+    
     if (exists("teamGLOB")) {
       for (i in 1:numLW_d()) {
         updateSelectizeInput(session,
@@ -1107,6 +1202,13 @@ function(input, output, session) {
                              choices = c("",sort(allFantasySkaters$Name)),
                              server =T)
       }
+      for (i in 1:numUtil_d()) {
+        updateSelectizeInput(session,
+                             paste0("Util",i),
+                             selected = teamGLOB$Name[teamGLOB$Position=="Util"][i],
+                             choices = c("",sort(allFantasySkaters$Name)),
+                             server =T)
+      }
       for (i in 1:numG_d()) {
         updateSelectizeInput(session,
                              paste0("G",i),
@@ -1114,6 +1216,8 @@ function(input, output, session) {
                              choices = c("",sort(allFantasyGoalies$Name)),
                              server =T)
       }
+
+      updateTeamRV(runif(1))
     }
   })
   
@@ -1162,7 +1266,6 @@ function(input, output, session) {
           } else if (input$teamStatRange != "s") {
             playerData = playerData[playerData$Date > today()-as.numeric(input$teamStatRange),]
           }
-          
           
           # Get stat totals
           playerData = playerData %>%

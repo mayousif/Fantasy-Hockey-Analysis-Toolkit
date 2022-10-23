@@ -6,3 +6,6 @@ runDataScrape.bat
 .Rhistory
 Fantasy-Hockey-Toolkit.Rproj
 runProgram.bat
+.httr-oauth
+OAuth.json
+getLeagueData.R

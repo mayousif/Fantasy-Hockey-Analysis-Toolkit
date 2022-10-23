@@ -172,13 +172,16 @@ body <- dashboardBody(
           collapsible = TRUE,
           collapsed = FALSE,
           fluidRow(
-            column(width = 3,align="center",
+            column(width = 3,align="center",offset=1,
+              selectizeInput(
+                "leagueTeam",h1("Load Team From League"),
+                choices = c("",unique(leaguerosters$team_name)),
+                selected = ""),
               fileInput(
                 "teamFileLoad",
-                label = h1("Load Team"),
+                label = h1("Load Team From File"),
                 accept = ".csv"
               ),
-              br(),
               h1("Save Team"),
               downloadButton(
                 "teamFileSave",
@@ -186,7 +189,7 @@ body <- dashboardBody(
                 icon = icon(lib="glyphicon", "download-alt")
               )
             ),
-            column(width=6,align="center",
+            column(width=6,align="center",offset = 1,
               fluidRow(
                 h1("Team Composition")
               ),
@@ -202,16 +205,17 @@ body <- dashboardBody(
                 )
               ),
               fluidRow(
-                column(width = 4, offset = 2,
+                column(width = 4,
                   selectInput("numD",h2("D"),0:9,selected=4)
+                ),
+                column(width = 4,
+                  selectInput("numUtil",h2("Util"),0:9,selected=4)
                 ),
                 column(width = 4,
                   selectInput("numG",h2("G"),0:9,selected=4)
                 )
+                
               )
-            ),
-            column(width=3,align="center",
-              
             )
           ),
           fluidRow(
@@ -241,12 +245,16 @@ body <- dashboardBody(
           ),
           fluidRow(
             column(width=12,align="center",
+                   h2("Util")
+            ),
+            uiOutput("util")
+          ),
+          fluidRow(
+            column(width=12,align="center",
               h2("Goalies")
             ),
             uiOutput("goalies")
           )
-        
-          
         )
       ),
       column(width = 3,
