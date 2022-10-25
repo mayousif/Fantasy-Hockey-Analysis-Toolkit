@@ -1,2 +1,2 @@
-# Fantasy Hockey Toolkit
+# Fantasy Hockey Analyzer
  
