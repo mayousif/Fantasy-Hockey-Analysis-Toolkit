@@ -1,4 +1,4 @@
-function(input, output, session) {
+shinyServer(function(input, output, session) {
   ## Initial setup =================================
 
   # Colour map for conditional formatting
@@ -1093,8 +1093,6 @@ function(input, output, session) {
         }
       }
       
-
-      
       # Update team df
       team = team[-1,]
       teamGLOB <<- team
@@ -1221,6 +1219,24 @@ function(input, output, session) {
     }
   })
   
+  
+  observeEvent(input$yahoo,{
+    
+    browseURL("https://api.login.yahoo.com/oauth2/request_auth?client_id=dj0yJmk9ZlR6WUdWRGtCTXY3JmQ9WVdrOWFtaElSR0ZTWlZFbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTcy&redirect_uri=oob&response_type=code")
+    showModal(modalDialog(size="s",
+      title = h1("Input Yahoo Authorization Code",align="center"),
+      textInput("dataset", "",placeholder = 'e.g., 7rtq8c'),
+      footer = tagList(
+        actionButton("confirm", "Ok"),
+        modalButton("Cancel")
+        )
+    ))
+  })
+  
+  
+  
+  
+  
   ## Fantasy Team - Team Stats Box ===============================
   observeEvent(c(teamGLOB_r$df,input$goalsFP,input$assistsFP,input$pointsFP,
                  input$pppFP,input$shFP,input$shotsFP,input$hitsFP,input$blocksFP,input$fowFP,
@@ -1346,7 +1362,7 @@ function(input, output, session) {
             playerData = playerDataLS
             playerTeam = playerTeamLS
           } else if (input$teamStatRange != "s") {
-            playerData = playerData[playerData$Date > today()-as.numeric(input$teamStatRange),]
+            playerData = playerData[playerData$Date >= today()-as.numeric(input$teamStatRange),]
           }
           
           # Get stat totals
@@ -1521,7 +1537,7 @@ function(input, output, session) {
   
   playerclick_d = debounce(reactive({as.numeric(input$playerclick)}),500)
 
-  # Click Load Button
+  # Click load button automatically
   observe({
     num = playerclick_d()
     if (!length(num)==0) {
@@ -1534,4 +1550,4 @@ function(input, output, session) {
     }
     
   })
-}
+})
