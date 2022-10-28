@@ -1735,7 +1735,7 @@ shinyServer(function(input, output, session) {
       updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status = "primary")
       output$yahooconnectui = renderUI({HTML('<p style="color:green;font-weight:700;font-size:16px;">Connected to Yahoo!</p>')})
     } else {
-      browseURL("https://api.login.yahoo.com/oauth2/request_auth?client_id=dj0yJmk9ZlR6WUdWRGtCTXY3JmQ9WVdrOWFtaElSR0ZTWlZFbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTcy&redirect_uri=oob&response_type=code")
+      browseURL("https://api.login.yahoo.com/oauth2/request_auth?client_id=dj0yJmk9OXU3WjZCUmxsYkRXJmQ9WVdrOWJXbHhVbEZhUVZNbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTc4&redirect_uri=oob&response_type=code")
       showModal(modalDialog(size="s",
                             title = h1("Input Yahoo Authorization Code",align="center"),
                             textInput("yahooCode", "",placeholder = 'e.g., 7rtq8c'),
@@ -1760,7 +1760,7 @@ shinyServer(function(input, output, session) {
     
     # Get and save access token
     app_name = "Fantasy Hockey Analyzer"
-    my_key = "dj0yJmk9ZlR6WUdWRGtCTXY3JmQ9WVdrOWFtaElSR0ZTWlZFbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTcy"
+    my_key = "dj0yJmk9OXU3WjZCUmxsYkRXJmQ9WVdrOWJXbHhVbEZhUVZNbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTc4"
     my_secret = fromJSON(file = paste0(currDir,"/Data/secret.json"))$secret
     redirect = "oob"
     
