@@ -558,7 +558,7 @@ shinyServer(function(input, output, session) {
     
 
       # Output to UI
-      output$text1_1 = renderUI({h3("Goals")})
+      output$text1_1 = renderUI({h2("Goals")})
       output$valueBox1_1 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(goalsPerc))),paste0("Rank: ",goalsRank,"/",nrow(allPlayerData)),
@@ -568,7 +568,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text1_2 = renderUI({h3("Assists")})
+      output$text1_2 = renderUI({h2("Assists")})
       output$valueBox1_2 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(assistsPerc))),paste0("Rank: ",round(assistsRank),"/",nrow(allPlayerData)),
@@ -578,7 +578,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text1_3 = renderUI({h3("Points")})
+      output$text1_3 = renderUI({h2("Points")})
       output$valueBox1_3 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(pointsPerc))),paste0("Rank: ",round(pointsRank),"/",nrow(allPlayerData)),
@@ -588,7 +588,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text2_1 = renderUI({h3("Shots")})
+      output$text2_1 = renderUI({h2("Shots")})
       output$valueBox2_1 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(shotsPerc))),paste0("Rank: ",round(shotsRank),"/",nrow(allPlayerData)),
@@ -598,7 +598,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text2_2 = renderUI({h3("PPG")})
+      output$text2_2 = renderUI({h2("PPG")})
       output$valueBox2_2 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(PPGPerc))),paste0("Rank: ",round(PPGRank),"/",nrow(allPlayerData)),
@@ -608,7 +608,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text2_3 = renderUI({h3("PPA")})
+      output$text2_3 = renderUI({h2("PPA")})
       output$valueBox2_3 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(PPAPerc))),paste0("Rank: ",round(PPARank),"/",nrow(allPlayerData)),
@@ -618,7 +618,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text3_1 = renderUI({h3("Hits")})
+      output$text3_1 = renderUI({h2("Hits")})
       output$valueBox3_1 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(HitsPerc))),paste0("Rank: ",round(HitsRank),"/",nrow(allPlayerData)),
@@ -628,7 +628,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text3_2 = renderUI({h3("Blocks")})
+      output$text3_2 = renderUI({h2("Blocks")})
       output$valueBox3_2 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(BlocksPerc))),paste0("Rank: ",round(BlocksRank),"/",nrow(allPlayerData)),
@@ -638,7 +638,7 @@ shinyServer(function(input, output, session) {
         )
       })
       
-      output$text3_3 = renderUI({h3("FOW")})
+      output$text3_3 = renderUI({h2("FOW")})
       output$valueBox3_3 = renderUI({
         tagList(
           valueBox(paste0(ordinal(round(FOWPerc))),paste0("Rank: ",round(FOWRank),"/",nrow(allPlayerData)),
@@ -664,7 +664,7 @@ shinyServer(function(input, output, session) {
           GARank = rank(allPlayerData$GA,ties.method = "min")[allPlayerData$ID==playerID]
           
           # Output to UI
-          output$text1_1 = renderUI({h3("Wins")})
+          output$text1_1 = renderUI({h2("Wins")})
           output$valueBox1_1 = renderUI({
             tagList(
               valueBox(paste0(ordinal(round(winsPerc))),paste0("Rank: ",winsRank,"/",nrow(allPlayerData)),
@@ -674,7 +674,7 @@ shinyServer(function(input, output, session) {
             )
           })
           
-          output$text1_2 = renderUI({h3("SO")})
+          output$text1_2 = renderUI({h2("SO")})
           output$valueBox1_2 = renderUI({
             tagList(
               valueBox(paste0(ordinal(round(SOPerc))),paste0("Rank: ",round(SORank),"/",nrow(allPlayerData)),
@@ -684,7 +684,7 @@ shinyServer(function(input, output, session) {
             )
           })
           
-          output$text1_3 = renderUI({h3("GA")})
+          output$text1_3 = renderUI({h2("GA")})
           output$valueBox1_3 = renderUI({
             tagList(
               valueBox(paste0(ordinal(round(GAPerc))),paste0("Rank: ",round(GARank),"/",nrow(allPlayerData)),
@@ -694,7 +694,7 @@ shinyServer(function(input, output, session) {
             )
           })
           
-          output$text2_1 = renderUI({h3("SA")})
+          output$text2_1 = renderUI({h2("SA")})
           output$valueBox2_1 = renderUI({
             tagList(
               valueBox(paste0(ordinal(round(SAPerc))),paste0("Rank: ",round(SARank),"/",nrow(allPlayerData)),
@@ -724,7 +724,7 @@ shinyServer(function(input, output, session) {
           GARank = rank(allPlayerData$GA/allPlayerData$GP,ties.method = "min")[allPlayerData$ID==playerID]      
           
           # Output to UI
-          output$text1_1 = renderUI({h3("Save %")})
+          output$text1_1 = renderUI({h2("Save %")})
           output$valueBox1_1 = renderUI({
             tagList(
               valueBox(paste0(ordinal(round(savefracPerc))),paste0("Rank: ",savefracRank,"/",nrow(allPlayerData)),
@@ -734,7 +734,7 @@ shinyServer(function(input, output, session) {
             )
           })
           
-          output$text1_2 = renderUI({h3("GAA")})
+          output$text1_2 = renderUI({h2("GAA")})
           output$valueBox1_2 = renderUI({
             tagList(
               valueBox(paste0(ordinal(round(GAPerc))),paste0("Rank: ",round(GARank),"/",nrow(allPlayerData)),
@@ -744,7 +744,7 @@ shinyServer(function(input, output, session) {
             )
           })
           
-          output$text1_3 = renderUI({h3("SAA")})
+          output$text1_3 = renderUI({h2("SAA")})
           output$valueBox1_3 = renderUI({
             tagList(
               valueBox(paste0(ordinal(round(SAPerc))),paste0("Rank: ",round(SARank),"/",nrow(allPlayerData)),
@@ -779,22 +779,71 @@ shinyServer(function(input, output, session) {
   
   
   ## Fantasy Team - Create/Upload ===============================
-  # Get current season data for skaters/goalies
-  skaterData <<- read.csv(paste0("Data/allSkaters/",currentSeason,".csv"))
-  skaterData <<- left_join(skaterData,playernames,"ID")
-  goalieData <<- read.csv(paste0("Data/allGoalies/",currentSeason,".csv"))
-  goalieData <<- left_join(goalieData,playernames,"ID")
-  skaterDataLS <<- read.csv(paste0("Data/allSkaters/",currentSeason-1,".csv"))
-  skaterDataLS <<- left_join(skaterDataLS,playernames,"ID")
-  goalieDataLS <<- read.csv(paste0("Data/allGoalies/",currentSeason-1,".csv"))
-  goalieDataLS <<- left_join(goalieDataLS,playernames,"ID")
+  # Display certain UI depending on data source choice
+  observeEvent(input$datasource, {
+    if (input$datasource == "loc") {
+      output$teamloadchoices = renderUI({
+        tagList(
+          column(width = 6,align = "center",
+            fileInput(
+              "teamFileLoad",
+              label = h2("Load Team"),
+              accept = ".csv"
+            ),
+          ),
+          column(width = 6, alight = 'center',
+            h2("Save Team"),
+            downloadButton(
+              "teamFileSave",
+              label = "Save",
+              icon = icon(lib="glyphicon", "download-alt")
+            )
+          )
+        )
+      })
+      
+    } else {
+      output$teamloadchoices = renderUI(withProgress(message = "Loading data...", value = 0.5,{
+        leagues <<- y_games(token)
+        return(tagList(
+          selectizeInput(
+            "yahooleague",
+            h2("Choose League"),
+            choices = c("",leagues$league_name[as.numeric(leagues$league_season)+1 == currentSeason]),
+            selected = "",
+            width = "75%"
+          )
+        ))
+      }))
+    }
+  })
   
-  allFantasySkaters <<- unique(rbind(skaterData[,c('ID','Name')],skaterDataLS[,c('ID','Name')]))
-  allFantasyGoalies <<- unique(rbind(goalieData[,c('ID','Name')],goalieDataLS[,c('ID','Name')]))
-
-  # Get current player lines
-  skaterLines <<- read.csv("Data/playerLines.csv")
-  
+  # Observe league choice
+  observeEvent(input$yahooleague, ignoreInit = T, withProgress(message = "Loading...",value = 0.5,{
+    if (input$yahooleague != "") {
+      
+      teams <<- y_teams(leagues$league_key[leagues$league_name==input$yahooleague &
+                                          as.numeric(leagues$league_season)+1 == currentSeason],token) # list of all teams
+      leaguerosters <<- y_rosters(leagues$league_key[leagues$league_name==input$yahooleague &
+                                                     as.numeric(leagues$league_season)+1 == currentSeason],token) # list of all players on teams
+      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR+'] <<- 'IR'
+      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='BN'] <<- 'Util'
+      leaguerosters$selected_position_position[leaguerosters$player_position_type=='G'] <<- 'G'
+      
+      leaguerosters$player_name_full <<- make.unique(leaguerosters$player_name_full)
+      leaguerosters$player_name_full <<- gsub('.1', ' (2)', leaguerosters$player_name_full)
+      leaguerosters$player_name_full <<-toTitleCase(tolower(leaguerosters$player_name_full))
+      
+      output$fantasyteam = renderUI({
+        selectizeInput(
+          "yahooteam",
+          h2("Choose Team"),
+          choices = teams$team_name,
+          selected = leaguerosters$team_name[!is.na(leaguerosters$team_is_owned_by_current_login)][1]
+        )
+      })
+    }
+  }))
   
   #Initialize tracking variables
   numC_UI = 0
@@ -827,7 +876,6 @@ shinyServer(function(input, output, session) {
   
   # Centers UI
   output$centers = renderUI({
-    print(2)
     # Randomize this reactivevalue to trigger other observers
     reactiveValue(runif(1))
     return(lapply(1:numC_d(), function(i) {
@@ -1014,8 +1062,6 @@ shinyServer(function(input, output, session) {
   teamGLOB_r = reactiveValues() 
   observeEvent(updateTeamRV_d(),{
     isolate({
-      print(4)
-      print(updateTeamRV_d())
       # compile team members into one dataframe
       team = as.data.frame(matrix(ncol=3))
       colnames(team) = c("ID","Name","Position")
@@ -1132,17 +1178,14 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
   })
   
-  # Load team from league
-  observeEvent(input$leagueTeam, {
-    if (input$leagueTeam != ""){
-      
-      print(1)
-      
+  # Load team from Yahoo league
+  observeEvent(input$yahooteam, {
+    if (input$yahooteam != ""){
       team = data.frame()
       team[1:nrow(leaguerosters),'Name'] = leaguerosters$player_name_full
       team$Position = leaguerosters$selected_position_position
       team = left_join(team, playernames[,c('Name','ID')],by = 'Name')
-      team = team[leaguerosters$team_name==input$leagueTeam,]
+      team = team[leaguerosters$team_name==input$yahooteam,]
       team = team[,c("Name","Position","ID")]
       teamGLOB <<- team
       teamGLOB_r$df  = teamGLOB
@@ -1169,8 +1212,7 @@ shinyServer(function(input, output, session) {
   
   # fill in player names
   observeEvent(c(reactiveValue2_d()), priority = 2, {
-    print(3)
-    
+
     if (exists("teamGLOB")) {
       for (i in 1:numLW_d()) {
         updateSelectizeInput(session,
@@ -1220,18 +1262,7 @@ shinyServer(function(input, output, session) {
   })
   
   
-  observeEvent(input$yahoo,{
-    
-    browseURL("https://api.login.yahoo.com/oauth2/request_auth?client_id=dj0yJmk9ZlR6WUdWRGtCTXY3JmQ9WVdrOWFtaElSR0ZTWlZFbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTcy&redirect_uri=oob&response_type=code")
-    showModal(modalDialog(size="s",
-      title = h1("Input Yahoo Authorization Code",align="center"),
-      textInput("dataset", "",placeholder = 'e.g., 7rtq8c'),
-      footer = tagList(
-        actionButton("confirm", "Ok"),
-        modalButton("Cancel")
-        )
-    ))
-  })
+
   
   
   
@@ -1255,19 +1286,19 @@ shinyServer(function(input, output, session) {
           
           # Read player data if it exists, read dummy file if not
           playerID = team$ID[i]
-          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))) {
-            playerData = read.csv(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))
+          if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))) {
+            playerData = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))
             playerTeam = playerData$Tm[nrow(playerData)]
           } else {
-            playerData = read.csv(paste0("Data/Players/dummyfileskater.csv"))[-1,]
+            playerData = read.csv(paste0(currDir,"/Data/Players/dummyfileskater.csv"))[-1,]
             playerTeam = ""
           }
           
-          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
-            playerDataLS = read.csv(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))
+          if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
+            playerDataLS = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))
             playerTeamLS = playerDataLS$Tm[nrow(playerDataLS)]
           } else {
-            playerDataLS = read.csv(paste0("Data/Players/dummyfileskater.csv"))[-1,]
+            playerDataLS = read.csv(paste0(currDir,"/Data/Players/dummyfileskater.csv"))[-1,]
             playerTeamLS = ""
           }
           
@@ -1337,19 +1368,19 @@ shinyServer(function(input, output, session) {
           
           # Read player data if it exists, read dummy file if not
           playerID = team$ID[i]
-          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))) {
-            playerData = read.csv(paste0("Data/Players/",playerID,"/",currentSeason,".csv"))
+          if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))) {
+            playerData = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))
             playerTeam = playerData$Tm[nrow(playerData)]
           } else {
-            playerData = read.csv(paste0("Data/Players/dummyfilegoalie.csv"))[-1,]
+            playerData = read.csv(paste0(currDir,"/Data/Players/dummyfilegoalie.csv"))[-1,]
             playerTeam = ""
             
           }
-          if (file.exists(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
-            playerDataLS = read.csv(paste0("Data/Players/",playerID,"/",currentSeason-1,".csv"))
+          if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
+            playerDataLS = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))
             playerTeamLS = playerDataLS$Tm[nrow(playerDataLS)]
           } else {
-            playerDataLS = read.csv(paste0("Data/Players/dummyfilegoalie.csv"))[-1,]
+            playerDataLS = read.csv(paste0(currDir,"/Data/Players/dummyfilegoalie.csv"))[-1,]
             playerTeamLS = ""
           }
           
@@ -1550,4 +1581,231 @@ shinyServer(function(input, output, session) {
     }
     
   })
+  
+  
+  
+
+
+  ## Account creation/login ===============================
+  # Create userbase file if one does not exist, otherwise read in user base
+  if (!file.exists(paste0(currDir,"/Data/Users/user_base.rds"))) {
+    dir.create(paste0(currDir,"/Data/Users/Tokens"))
+    user_base <<- tibble::tibble(
+      user = "testuser",
+      password = purrr::map_chr("pass1", sodium::password_store),
+      permissions = "standard",
+      ID = 1,
+      favteam = "Detroit Red Wings"
+    )
+    
+    saveRDS(user_base, paste0(currDir,"/Data/Users/user_base.rds"))
+  } else {
+    user_base <<- readRDS(paste0(currDir,"/Data/Users/user_base.rds"))
+  }
+  
+  
+  
+  # Observe login button in top right
+  observeEvent(input$loginopen, ignoreInit = T,{
+    credentials <<- loginServer(
+      id = "login",
+      data = user_base,
+      user_col = user,
+      pwd_col = password,
+      sodium_hashed = TRUE,
+      log_out = reactive(logout_init()),
+      reload_on_logout = TRUE,
+    )
+    
+    logout_init = shinyauthr::logoutServer(
+      id = "logout",
+      active = reactive(credentials()$user_auth)
+    )
+
+    showModal(modalDialog(size="s",
+                          footer = NULL,
+                          easyClose = TRUE,
+                          shinyauthr::loginUI(id = "login")
+    ))
+    
+    
+    # Observe login button after inputting credentials
+    observeEvent(input$`login-button`, ignoreInit = T, {
+      req(credentials()$user_auth)    
+      removeModal()
+      hideElement('loginopen')
+      hideElement('createacc')
+      output$user <- renderUser({
+        dashboardUser(
+          name = strong(credentials()$info[1]), 
+          image =logos$File[logos$Team==as.character(credentials()$info[5])], 
+          footer = p("The footer", class = "text-center"),
+          fluidRow(
+            dashboardUserItem(
+              width = 6,
+              uiOutput("yahooconnectui")
+            ),
+            dashboardUserItem(
+              width = 6,
+              logoutUI(id = "logout")
+            )
+          )
+        )
+      })
+    })
+
+  })
+  
+  observeEvent(input$`login-button`, ignoreInit = T, delay(1000,{
+    print(file.exists(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds")))
+    if (file.exists(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))) {
+      token <<- readRDS(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))
+      token$refresh()
+      hideElement("yahooconnect")
+      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status = "primary")
+      output$yahooconnectui = renderUI({HTML('<p style="color:green;font-weight:700;font-size:16px;">Connected to Yahoo!</p>')})
+    } else {
+      output$yahooconnectui = renderUI({actionButton("yahooconnect","Connect to Yahoo")})
+    }
+    
+  }))
+  
+  # Create account button
+  observeEvent(input$createacc,ignoreInit = T, {
+    showModal(
+      modalDialog(
+        size="s",
+        title = fluidRow(column(width = 12,align = "center",
+                  h1("Create a New Account")
+        )),
+        footer = NULL,
+        easyClose = TRUE,
+        textInput("createUsername","Username"),
+        passwordInput("createPass1","Password"),
+        passwordInput("createPass2","Re-type Password"),
+        selectizeInput("favteam","(Optional) Favourite Team",choices = c("",logos$Team)),
+        fluidRow(column(width = 12,align = "center",
+          actionButton("createaccdone","Create Account")
+        )),
+        fluidRow(column(width = 12,align = "center",
+          uiOutput("createacctext")
+        ))
+      )
+    )
+    
+    # Account creation 
+    observeEvent(input$createaccdone, ignoreInit = T, {
+      # Check if username exists
+      if (input$createUsername %in% user_base$user) {
+        output$createacctext = renderUI({
+          HTML('<p style="color:red;font-weight:700;font-size:16px;">Username already exists!</p>')
+        })
+      # Check if passwords match 
+      } else if (input$createPass1 != input$createPass2) {
+        output$createacctext = renderUI({
+          HTML('<p style="color:red;font-weight:700;font-size:16px;">Passwords do not match!</p>')
+        })
+      # Check if password is at least 6 characters  
+      } else if (nchar(input$createPass1) < 6) {
+        output$createacctext = renderUI({
+          HTML('<p style="color:red;font-weight:700;font-size:16px;">Password must be at least 6 characters!</p>')
+        })
+      } else {
+        # Append user to dataframe
+        user_base <<- user_base %>% 
+          tibble::add_row(
+            user = input$createUsername,
+            password = purrr::map_chr(input$createPass1, sodium::password_store), 
+            permissions = "standard",
+            ID = nrow(user_base)+1,
+            favteam = ifelse(input$favteam == "","NHL",input$favteam))
+        
+        # Save to rds file
+        saveRDS(user_base, paste0(currDir,"/Data/Users/user_base.rds"))
+        
+        output$createacctext = renderUI({
+          HTML('<p style="color:green;font-weight:700;font-size:16;">Account created successfully, please login.</p>')
+        })
+        delay(2500,{removeModal()})
+        
+        
+      }
+      
+    })
+  })
+  
+  
+  # "Connect to yahoo" button
+  observeEvent(input$yahooconnect,ignoreInit = T, {
+    
+    if (file.exists(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))) {
+      token <<- readRDS(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))
+      token$refresh()
+      hideElement("yahooconnect")
+      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status = "primary")
+      output$yahooconnectui = renderUI({HTML('<p style="color:green;font-weight:700;font-size:16px;">Connected to Yahoo!</p>')})
+    } else {
+      browseURL("https://api.login.yahoo.com/oauth2/request_auth?client_id=dj0yJmk9ZlR6WUdWRGtCTXY3JmQ9WVdrOWFtaElSR0ZTWlZFbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTcy&redirect_uri=oob&response_type=code")
+      showModal(modalDialog(size="s",
+                            title = h1("Input Yahoo Authorization Code",align="center"),
+                            textInput("yahooCode", "",placeholder = 'e.g., 7rtq8c'),
+                            footer = tagList(
+                              fluidRow(column(width=12,align="center",
+                                actionButton("confirm", "Ok"),
+                                modalButton("Cancel")
+                              )),
+                              fluidRow(column(width=12,align="center",
+                                uiOutput("codetext")                
+                              ))
+                            )
+      ))
+    }
+    
+    
+    
+  })
+  
+  # Yahoo access code input
+  observeEvent(input$confirm,ignoreInit = T, {
+    
+    # Get and save access token
+    app_name = "Fantasy Hockey Analyzer"
+    my_key = "dj0yJmk9ZlR6WUdWRGtCTXY3JmQ9WVdrOWFtaElSR0ZTWlZFbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTcy"
+    my_secret = "c8af86a5da23a57a7eb61e961faa800a988a228c"
+    redirect = "oob"
+    
+    code = input$yahooCode
+    myapp = httr::oauth_app(appname = app_name, 
+                             key = my_key,
+                             secret = my_secret,
+                             redirect_uri = redirect)
+    result = tryCatch({
+       token <<- httr::oauth2.0_token(httr::oauth_endpoints("yahoo"),
+                                  myapp,
+                                  credentials = oauth2.0_access_token(httr::oauth_endpoints("yahoo"),myapp,code),
+                                  cache = 'Data/test.token')
+        saveRDS(token,file = paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))
+        output$codetext = renderUI({
+          HTML('<p style="color:green;font-weight:700;font-size:16px;">Successfully connected!</p>')
+        })
+        hideElement("yahooconnect")
+        updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status ="primary")
+        delay(2500,{removeModal()})
+        
+        
+        
+    }, warning = function(w) {
+      output$codetext = renderUI({
+        HTML('<p style="color:red;font-weight:700;font-size:16px;">Incorrect code!</p>')
+      })
+    }, error = function(e) {
+      output$codetext = renderUI({
+        HTML('<p style="color:red;font-weight:700;font-size:16px;">Incorrect code!</p>')
+      })
+    })
+  })
+  
+  
+  
+  
 })
