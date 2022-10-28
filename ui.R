@@ -18,6 +18,7 @@ library(sodium)
 library(purrr)
 library(httr)
 library(YFAR)
+library(rjson)
 
 # Current directory of the app
 currDir <<- paste0('C:/Users/Meguel/Desktop/nhl/Fantasy-Hockey-Analyzer')
@@ -289,65 +290,55 @@ body <- dashboardBody(
                               ),
                               fluidRow(
                                 column(width = 4,
-                                       selectInput("numLW",h2("LW"),0:9,selected=4)
+                                       selectInput("numLW",h2("LW"),1:9,selected=4)
                                 ),
                                 column(width = 4, 
-                                       selectInput("numC",h2("C"),0:9,selected=4)
+                                       selectInput("numC",h2("C"),1:9,selected=4)
                                 ),
                                 column(width = 4,
-                                       selectInput("numRW",h2("RW"),0:9,selected=4)
+                                       selectInput("numRW",h2("RW"),1:9,selected=4)
                                 )
                               ),
                               fluidRow(
                                 column(width = 4,
-                                       selectInput("numD",h2("D"),0:9,selected=4)
+                                       selectInput("numD",h2("D"),1:9,selected=4)
                                 ),
                                 column(width = 4,
-                                       selectInput("numUtil",h2("Util"),0:9,selected=4)
+                                       selectInput("numMisc",h2("Misc"),1:9,selected=4)
                                 ),
                                 column(width = 4,
-                                       selectInput("numG",h2("G"),0:9,selected=4)
+                                       selectInput("numG",h2("G"),1:9,selected=4)
                                 )
                                 
                               )
                        )
                      ),
                      fluidRow(
-                       column(width=12,align="center",
-                              h2("Left Wingers")
+                       column(width=2,align="center",
+                              h2("Left Wingers"),
+                              uiOutput("leftwings")
                        ),
-                       uiOutput("leftwings")
-                     ),
-                     fluidRow(
-                       column(width=12,align="center",
-                              h2("Centers")
+                       column(width=2,align="center",
+                              h2("Centers"),
+                              uiOutput("centers")
                        ),
-                       uiOutput("centers")
-                     ),
-                     
-                     fluidRow(
-                       column(width=12,align="center",
-                              h2("Right Wingers")
+                       column(width=2,align="center",
+                              h2("Right Wingers"),
+                              uiOutput("rightwings")
                        ),
-                       uiOutput("rightwings")
-                     ),
-                     fluidRow(
-                       column(width=12,align="center",
-                              h2("Defensemen")
+                       column(width=2,align="center",
+                              h2("Defensemen"),
+                              uiOutput("defensemen")
                        ),
-                       uiOutput("defensemen")
-                     ),
-                     fluidRow(
-                       column(width=12,align="center",
-                              h2("Util")
+                       column(width=2,align="center",
+                              h2("Misc"),
+                              h2("(Util, IR, IR+)"),
+                             uiOutput("misc")
                        ),
-                       uiOutput("util")
-                     ),
-                     fluidRow(
-                       column(width=12,align="center",
-                              h2("Goalies")
-                       ),
-                       uiOutput("goalies")
+                       column(width=2,align="center",
+                              h2("Goalies"),
+                              uiOutput("goalies")
+                       )
                      )
                    )
             ),

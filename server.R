@@ -826,8 +826,10 @@ shinyServer(function(input, output, session) {
                                           as.numeric(leagues$league_season)+1 == currentSeason],token) # list of all teams
       leaguerosters <<- y_rosters(leagues$league_key[leagues$league_name==input$yahooleague &
                                                      as.numeric(leagues$league_season)+1 == currentSeason],token) # list of all players on teams
-      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR+'] <<- 'IR'
-      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='BN'] <<- 'Util'
+      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR+'] <<- 'Misc'
+      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR'] <<- 'Misc'
+      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='BN'] <<- 'Misc'
+      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='Util'] <<- 'Misc'
       leaguerosters$selected_position_position[leaguerosters$player_position_type=='G'] <<- 'G'
       
       leaguerosters$player_name_full <<- make.unique(leaguerosters$player_name_full)
@@ -851,21 +853,21 @@ shinyServer(function(input, output, session) {
   numRW_UI = 0
   numD_UI = 0
   numG_UI = 0
-  numUtil_UI = 0
+  numMisc_UI = 0
   
   numC = reactive({as.numeric(input$numC)})
   numLW = reactive({as.numeric(input$numLW)})
   numRW = reactive({as.numeric(input$numRW)})
   numD = reactive({as.numeric(input$numD)})
   numG = reactive({as.numeric(input$numG)})
-  numUtil = reactive({as.numeric(input$numUtil)})
+  numMisc = reactive({as.numeric(input$numMisc)})
 
   numC_d = debounce(numC,100)
   numLW_d = debounce(numLW,100)
   numRW_d = debounce(numRW,100)
   numD_d = debounce(numD,100)
   numG_d = debounce(numG,100)
-  numUtil_d = debounce(numUtil,100)
+  numMisc_d = debounce(numMisc,100)
   
   reactiveValue = reactiveVal(0)
   reactiveValue1_d = debounce(reactive({reactiveValue()}), 100)
@@ -879,13 +881,11 @@ shinyServer(function(input, output, session) {
     # Randomize this reactivevalue to trigger other observers
     reactiveValue(runif(1))
     return(lapply(1:numC_d(), function(i) {
-      column(width = floor(12/numC_d()),
-        selectizeInput(
-          paste0("C",i),
-          label = NULL,
-          choices = "",
-          selected = ""
-        )
+      selectizeInput(
+        paste0("C",i),
+        label = NULL,
+        choices = "",
+        selected = ""
       )
     }))
   })
@@ -909,13 +909,11 @@ shinyServer(function(input, output, session) {
   output$leftwings = renderUI({
     
     return(lapply(1:numLW_d(), function(i) {
-      column(width = floor(12/numLW_d()),
-             selectizeInput(
-               paste0("LW",i),
-               label = NULL,
-               choices = "",
-               selected = ""
-             )
+      selectizeInput(
+        paste0("LW",i),
+        label = NULL,
+        choices = "",
+        selected = ""
       )
     }))
   })
@@ -937,13 +935,11 @@ shinyServer(function(input, output, session) {
   # Right wings UI
   output$rightwings = renderUI({
     return(lapply(1:numRW_d(), function(i) {
-      column(width = floor(12/numRW_d()),
-             selectizeInput(
-               paste0("RW",i),
-               label = NULL,
-               choices = "",
-               selected = ""
-             )
+      selectizeInput(
+        paste0("RW",i),
+        label = NULL,
+        choices = "",
+        selected = ""
       )
     }))
   })
@@ -966,13 +962,11 @@ shinyServer(function(input, output, session) {
   # Defensemen  UI
   output$defensemen = renderUI({
     return(lapply(1:numD_d(), function(i) {
-      column(width = floor(12/numD_d()),
-             selectizeInput(
-               paste0("D",i),
-               label = NULL,
-               choices = "",
-               selected = ""
-             )
+      selectizeInput(
+        paste0("D",i),
+        label = NULL,
+        choices = "",
+        selected = ""
       )
     }))
   })
@@ -994,13 +988,11 @@ shinyServer(function(input, output, session) {
   # Goalies  UI
   output$goalies = renderUI({
     return(lapply(1:numG_d(), function(i) {
-      column(width = floor(12/numG_d()),
-             selectizeInput(
-               paste0("G",i),
-               label = NULL,
-               choices = "",
-               selected = ""
-             )
+      selectizeInput(
+        paste0("G",i),
+        label = NULL,
+        choices = "",
+        selected = ""
       )
     }))
   })
@@ -1019,28 +1011,26 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # Util UI
-  output$util = renderUI({
-    return(lapply(1:numUtil_d(), function(i) {
-      column(width = floor(12/numUtil_d()),
-             selectizeInput(
-               paste0("Util",i),
-               label = NULL,
-               choices = "",
-               selected = ""
-             )
+  # Misc UI
+  output$misc = renderUI({
+    return(lapply(1:numMisc_d(), function(i) {
+      selectizeInput(
+        paste0("Misc",i),
+        label = NULL,
+        choices = "",
+        selected = ""
       )
     }))
   })
   
   observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
-    if (numUtil_d() != numUtil_UI) {
-      numUtil_UI <<- numUtil_d()
+    if (numMisc_d() != numMisc_UI) {
+      numMisc_UI <<- numMisc_d()
     }
-    for (i in 1:numUtil_UI) {
+    for (i in 1:numMisc_UI) {
       updateSelectizeInput(
         session,
-        paste0("Util",i),
+        paste0("Misc",i),
         choices = c("",sort(allFantasySkaters$Name)),
         server =T
       )
@@ -1049,12 +1039,12 @@ shinyServer(function(input, output, session) {
   
   
   # Dynamically update global team dataframe
-  observeEvent(c(input$C1,input$C2,input$C3,input$C4,input$C5,input$C6,input$C7,
-                 input$LW1,input$LW2,input$LW3,input$LW4,input$LW5,input$LW6,input$LW7,
-                 input$RW1,input$RW2,input$RW3,input$RW4,input$RW5,input$RW6,input$RW7,
-                 input$D1,input$D2,input$D3,input$D4,input$D5,input$D6,input$D7,
-                 input$G1,input$G2,input$G3,input$G4,input$G5,input$G6,input$G7,
-                 input$Util1,input$Util2,input$Util3,input$Util4,input$Util5,input$Util6,input$Util7),{
+  observeEvent(c(input$C1,input$C2,input$C3,input$C4,input$C5,input$C6,input$C7,input$C8,input$C9,
+                 input$LW1,input$LW2,input$LW3,input$LW4,input$LW5,input$LW6,input$LW7,input$LW8,input$LW9,
+                 input$RW1,input$RW2,input$RW3,input$RW4,input$RW5,input$RW6,input$RW7,input$RW8,input$RW9,
+                 input$D1,input$D2,input$D3,input$D4,input$D5,input$D6,input$D7,input$D8,input$D9,
+                 input$G1,input$G2,input$G3,input$G4,input$G5,input$G6,input$G7,input$G8,input$G9,
+                 input$Misc1,input$Misc2,input$Misc3,input$Misc4,input$Misc5,input$Misc6,input$Misc7,input$Misc8,input$Misc9),{
     updateTeamRV(runif(1))
     
   })
@@ -1115,14 +1105,14 @@ shinyServer(function(input, output, session) {
         }
       }    
       
-      # append util
-      for (i in 1:numUtil_UI) {
+      # append misc
+      for (i in 1:numMisc_UI) {
         
-        playerName = input[[paste0("Util",i)]]
+        playerName = input[[paste0("Misc",i)]]
         playerID = allFantasySkaters$ID[allFantasySkaters$Name == playerName]
         if (!is.null(playerName)) {
           if (!playerName=="") {
-            team = rbind(team,c(playerID,playerName,"Util"))
+            team = rbind(team,c(playerID,playerName,"Misc"))
           }
         }
       }
@@ -1168,13 +1158,13 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session,"numC",selected ="0")
     updateSelectInput(session,"numRW",selected ="0")
     updateSelectInput(session,"numD",selected ="0")
-    updateSelectInput(session,"numUtil",selected ="0")
+    updateSelectInput(session,"numMisc",selected ="0")
     updateSelectInput(session,"numG",selected ="0")
     updateSelectInput(session,"numLW",selected =as.character(sum(teamGLOB$Position=="LW")))
     updateSelectInput(session,"numC",selected =as.character(sum(teamGLOB$Position=="C")))
     updateSelectInput(session,"numRW",selected =as.character(sum(teamGLOB$Position=="RW")))
     updateSelectInput(session,"numD",selected =as.character(sum(teamGLOB$Position=="D")))
-    updateSelectInput(session,"numUtil",selected =as.character(sum(teamGLOB$Position=="Util")))
+    updateSelectInput(session,"numMisc",selected =as.character(sum(teamGLOB$Position=="Misc")))
     updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
   })
   
@@ -1195,13 +1185,13 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session,"numC",selected ="0")
       updateSelectInput(session,"numRW",selected ="0")
       updateSelectInput(session,"numD",selected ="0")
-      updateSelectInput(session,"numUtil",selected ="0")
+      updateSelectInput(session,"numMisc",selected ="0")
       updateSelectInput(session,"numG",selected ="0")
       updateSelectInput(session,"numLW",selected =as.character(sum(teamGLOB$Position=="LW")))
       updateSelectInput(session,"numC",selected =as.character(sum(teamGLOB$Position=="C")))
       updateSelectInput(session,"numRW",selected =as.character(sum(teamGLOB$Position=="RW")))
       updateSelectInput(session,"numD",selected =as.character(sum(teamGLOB$Position=="D")))
-      updateSelectInput(session,"numUtil",selected =as.character(sum(teamGLOB$Position=="Util")))
+      updateSelectInput(session,"numMisc",selected =as.character(sum(teamGLOB$Position=="Misc")))
       updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
       
     }
@@ -1242,10 +1232,10 @@ shinyServer(function(input, output, session) {
                              choices = c("",sort(allFantasySkaters$Name)),
                              server =T)
       }
-      for (i in 1:numUtil_d()) {
+      for (i in 1:numMisc_d()) {
         updateSelectizeInput(session,
-                             paste0("Util",i),
-                             selected = teamGLOB$Name[teamGLOB$Position=="Util"][i],
+                             paste0("Misc",i),
+                             selected = teamGLOB$Name[teamGLOB$Position=="Misc"][i],
                              choices = c("",sort(allFantasySkaters$Name)),
                              server =T)
       }
@@ -1771,7 +1761,7 @@ shinyServer(function(input, output, session) {
     # Get and save access token
     app_name = "Fantasy Hockey Analyzer"
     my_key = "dj0yJmk9ZlR6WUdWRGtCTXY3JmQ9WVdrOWFtaElSR0ZTWlZFbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTcy"
-    my_secret = "c8af86a5da23a57a7eb61e961faa800a988a228c"
+    my_secret = fromJSON(file = paste0(currDir,"/Data/secret.json"))$secret
     redirect = "oob"
     
     code = input$yahooCode
