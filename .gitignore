@@ -10,3 +10,4 @@ runProgram.bat
 OAuth.json
 getLeagueData.R
 Fantasy-Hockey-Analyzer.Rproj
+*.RDS
