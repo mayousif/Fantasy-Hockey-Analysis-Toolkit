@@ -19,6 +19,9 @@ library(purrr)
 library(httr)
 library(YFAR)
 library(rjson)
+library(reactlog)
+
+enableBookmarking(store="server")
 
 # Current directory of the app
 currDir <<- paste0('C:/Users/Meguel/Desktop/nhl/Fantasy-Hockey-Analyzer')
@@ -55,25 +58,10 @@ collapseInput = function(inputId, boxId) {
   )
 }
 
-# Read in all players, current lines, current fantasy teams
+# Read in all players, current lines, and nhl team names/abvs
 playernames <<- read.csv(paste0(currDir,"/Data/PlayerNames.csv"))
-# colnames(playernames)[2] <<- 'HR.Position'
-playernames$Name <<- toTitleCase(tolower(playernames$Name))
-
-# playernamesyahoo <<- read.csv(paste0(currDir,"/Data/PlayerNamesYahoo.csv"))
-# colnames(playernamesyahoo) <<- c("Name","Y.Position1","Y.Position2","Y.Position3")
-# playernamesyahoo$Name <<- make.unique(playernamesyahoo$Name)
-# playernamesyahoo$Name <<- gsub('.1', ' (2)', playernamesyahoo$Name)
-# playernamesyahoo$Name <<-toTitleCase(tolower(playernamesyahoo$Name))
-# playernames <<- left_join(playernames,playernamesyahoo,by='Name')
-# playernames$Position <<- playernames$Y.Position1
-# playernames$Position[is.na(playernames$Position)] <<- playernames$HR.Position[is.na(playernames$Position)]
-
 playerlines <<- read.csv(paste0(currDir,"/Data/PlayerLines.csv"))
-playerlines$Player <<- toTitleCase(tolower(playerlines$Player))
-playerlines$Linemate1 <<- toTitleCase(tolower(playerlines$Linemate1))
-playerlines$Linemate2 <<- toTitleCase(tolower(playerlines$Linemate2))
-
+nhlteams <<- read.csv(paste0(currDir,"/Data/TeamNames.csv"))
 
 
 # Get current season
@@ -304,7 +292,7 @@ body <- dashboardBody(
                                        selectInput("numD",h2("D"),1:9,selected=4)
                                 ),
                                 column(width = 4,
-                                       selectInput("numMisc",h2("Misc"),1:9,selected=4)
+                                       selectInput("numMisc",h2("Misc (Util, IR, IR+)"),1:9,selected=4)
                                 ),
                                 column(width = 4,
                                        selectInput("numG",h2("G"),1:9,selected=4)
@@ -332,7 +320,6 @@ body <- dashboardBody(
                        ),
                        column(width=2,align="center",
                               h2("Misc"),
-                              h2("(Util, IR, IR+)"),
                              uiOutput("misc")
                        ),
                        column(width=2,align="center",
@@ -352,10 +339,10 @@ body <- dashboardBody(
                      collapsible = TRUE,
                      collapsed = FALSE,
                      column(width = 12, align ="center",
-                            h1("Fantasy Stat Values")
+                            h1("Fantasy Points Scoring")
                      ),
                      column(width =6, align = "center",
-                            h1("Skaters"), 
+                            h1("Skaters",style ="font-size:18px"), 
                             fluidRow(
                               column(width = 5,align = "right",
                                      br(),
@@ -439,7 +426,7 @@ body <- dashboardBody(
                             )
                      ),
                      column(width =6, align = "center",
-                            h1("Goalies"), 
+                            h1("Goalies",style ="font-size:18px"), 
                             fluidRow(
                               column(width = 5,align = "right",
                                      br(),

@@ -13,6 +13,7 @@ shinyServer(function(input, output, session) {
     }
   }  
   
+  
   ## Set default attributes for UI elements =================================
   updateSelectizeInput(session, 
                        'playerInput', 
@@ -805,11 +806,13 @@ shinyServer(function(input, output, session) {
     } else {
       output$teamloadchoices = renderUI(withProgress(message = "Loading data...", value = 0.5,{
         leagues <<- y_games(token)
+        leagueschoices = c(" " ="",split(leagues$league_id[leagues$league_season==currentSeason-1],
+                                         leagues$league_name[leagues$league_season==currentSeason-1]))
         return(tagList(
           selectizeInput(
             "yahooleague",
             h2("Choose League"),
-            choices = c("",leagues$league_name[as.numeric(leagues$league_season)+1 == currentSeason]),
+            choices = leagueschoices,
             selected = "",
             width = "75%"
           )
@@ -819,41 +822,65 @@ shinyServer(function(input, output, session) {
   })
   
   # Observe league choice
-  observeEvent(input$yahooleague, ignoreInit = T, withProgress(message = "Loading...",value = 0.5,{
+  observeEvent(input$yahooleague, ignoreInit = T, withProgress(message = "Loading...",value = 0.2,{
     if (input$yahooleague != "") {
+      # Create new folder for league data if it doesnt exist
+      if (!dir.exists(paste0(currDir,"/Data/Leagues/",input$yahooleague))) {
+        dir.create(paste0(currDir,"/Data/Leagues/",input$yahooleague),recursive = TRUE)
       
-      teams <<- y_teams(leagues$league_key[leagues$league_name==input$yahooleague &
-                                          as.numeric(leagues$league_season)+1 == currentSeason],token) # list of all teams
-      leaguerosters <<- y_rosters(leagues$league_key[leagues$league_name==input$yahooleague &
-                                                     as.numeric(leagues$league_season)+1 == currentSeason],token) # list of all players on teams
-      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR+'] <<- 'Misc'
-      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR'] <<- 'Misc'
-      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='BN'] <<- 'Misc'
-      leaguerosters$selected_position_position[leaguerosters$selected_position_position=='Util'] <<- 'Misc'
-      leaguerosters$selected_position_position[leaguerosters$player_position_type=='G'] <<- 'G'
-      
-      leaguerosters$player_name_full <<- make.unique(leaguerosters$player_name_full)
-      leaguerosters$player_name_full <<- gsub('.1', ' (2)', leaguerosters$player_name_full)
-      leaguerosters$player_name_full <<-toTitleCase(tolower(leaguerosters$player_name_full))
+        # First-time data pull (team info, team rosters, all player data)
+        setProgress(value = 0.5, message = "Gathering league data for the first time (may take a few minutes)")
+        teams <<- y_teams(leagues$league_key[leagues$league_id==input$yahooleague],token) # list of all teams
+        leaguerosters <<- y_rosters(leagues$league_key[leagues$league_id==input$yahooleague],token) # list of all players on teams
+        leagueplayers <<- y_player_slate(leagues$league_key[leagues$league_id==input$yahooleague],token)
+        leaguerosters <<- left_join(leagueplayers,leaguerosters)
+        
+        # Clean up positions and names
+        leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR+'] <<- 'Misc'
+        leaguerosters$selected_position_position[leaguerosters$selected_position_position=='IR'] <<- 'Misc'
+        leaguerosters$selected_position_position[leaguerosters$selected_position_position=='BN'] <<- 'Misc'
+        leaguerosters$selected_position_position[leaguerosters$selected_position_position=='Util'] <<- 'Misc'
+        leaguerosters$selected_position_position[leaguerosters$player_position_type=='G'] <<- 'G'
+        
+        
+        tempteamnames = data.frame(teamname=str_replace(leaguerosters$player_editorial_team_full_name,"\\.",""))
+        tempteamnames = left_join(tempteamnames,nhlteams)
+        leaguerosters$player_editorial_team_abbr = tempteamnames$teamabv
+        leaguerosters$player_name_full <<- toTitleCase(tolower(leaguerosters$player_name_full)) # title case
+        leaguerosters$player_name_full <<- gsub("(?<=^|\\.)([a-z])", "\\U\\1", leaguerosters$player_name_full, perl=TRUE) # captilize letters after periods
+        leaguerosters$player_name_full <<- paste0(leaguerosters$player_name_full," (",leaguerosters$player_editorial_team_abbr,")")
+        
+        # Save data
+        saveRDS(teams,paste0(currDir,"/Data/Leagues/",input$yahooleague,"/teams.rds"))
+        saveRDS(leaguerosters,paste0(currDir,"/Data/Leagues/",input$yahooleague,"/leaguerosters.rds"))
+        
+
+      } else {
+        setProgress(value = 0.5)
+        teams <<- readRDS(paste0(currDir,"/Data/Leagues/",input$yahooleague,"/teams.rds"))
+        leaguerosters <<- readRDS(paste0(currDir,"/Data/Leagues/",input$yahooleague,"/leaguerosters.rds"))
+        
+      }
       
       output$fantasyteam = renderUI({
         selectizeInput(
           "yahooteam",
           h2("Choose Team"),
-          choices = teams$team_name,
-          selected = leaguerosters$team_name[!is.na(leaguerosters$team_is_owned_by_current_login)][1]
+          choices = c("",teams$team_name),
+          selected = "",
+          width = '75%'
         )
       })
     }
   }))
   
   #Initialize tracking variables
-  numC_UI = 0
-  numLW_UI = 0
-  numRW_UI = 0
-  numD_UI = 0
-  numG_UI = 0
-  numMisc_UI = 0
+  numC_UI <<- 0
+  numLW_UI <<- 0
+  numRW_UI <<- 0
+  numD_UI <<- 0
+  numG_UI <<- 0
+  numMisc_UI <<- 0
   
   numC = reactive({as.numeric(input$numC)})
   numLW = reactive({as.numeric(input$numLW)})
@@ -869,174 +896,168 @@ shinyServer(function(input, output, session) {
   numG_d = debounce(numG,100)
   numMisc_d = debounce(numMisc,100)
   
+  # Reactive value to trigger player name updates in UI selectize inputs
   reactiveValue = reactiveVal(0)
-  reactiveValue1_d = debounce(reactive({reactiveValue()}), 100)
-  reactiveValue2_d = debounce(reactive({reactiveValue()}), 500)
-  
+  reactiveValue1_d = debounce(reactive({reactiveValue()}), 500)
+
   updateTeamRV = reactiveVal(0)
   updateTeamRV_d = debounce(reactive({updateTeamRV()}), 500)
   
   # Centers UI
-  output$centers = renderUI({
-    # Randomize this reactivevalue to trigger other observers
+  C_UI <<- list()
+  observeEvent(numC_d(), suppressWarnings({
+    if (numC_UI < numC_d()) {
+      diff = numC_d() - numC_UI
+
+      for (i in 1:diff) {
+        C_UI[[i+numC_UI]] <<-
+          selectizeInput(
+            paste0("C",i+numC_UI),
+            label = NULL,
+            choices = c("",sort(allFantasySkaters$Name)),
+            selected = ""
+          )
+      }
+    } else if (numC_UI > numC_d()) {
+      diff = numC_UI - numC_d()
+
+      C_UI <<- C_UI[-c((numC_UI+1-diff):numC_UI)]
+
+    }
+    numC_UI <<- numC_d()
+    output$centers = renderUI({C_UI})
     reactiveValue(runif(1))
-    return(lapply(1:numC_d(), function(i) {
-      selectizeInput(
-        paste0("C",i),
-        label = NULL,
-        choices = "",
-        selected = ""
-      )
-    }))
-  })
+  }))
   
-  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
-    if (numC_d() != numC_UI) {
-      numC_UI <<- numC_d()
-    }
-    for (i in 1:numC_UI) {
-        updateSelectizeInput(
-          session,
-          paste0("C",i),
-          choices = c("",sort(allFantasySkaters$Name)),
-          server =T
-        )
+  # LW UI
+  LW_UI <<- list()
+  observeEvent(numLW_d(), suppressWarnings({
+    if (numLW_UI < numLW_d()) {
+      diff = numLW_d() - numLW_UI
+      
+      for (i in 1:diff) {
+        LW_UI[[i+numLW_UI]] <<-
+          selectizeInput(
+            paste0("LW",i+numLW_UI),
+            label = NULL,
+            choices = c("",sort(allFantasySkaters$Name)),
+            selected = ""
+          )
       }
-  })
-  
-  
-  # Left wings UI
-  output$leftwings = renderUI({
-    
-    return(lapply(1:numLW_d(), function(i) {
-      selectizeInput(
-        paste0("LW",i),
-        label = NULL,
-        choices = "",
-        selected = ""
-      )
-    }))
-  })
-  
-  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
-    if (numLW_d() != numLW_UI) {
-      numLW_UI <<- numLW_d()
+    } else if (numLW_UI > numLW_d()) {
+      diff = numLW_UI - numLW_d()
+      
+      LW_UI <<- LW_UI[-c((numLW_UI+1-diff):numLW_UI)]
+      
     }
-    for (i in 1:numLW_UI) {
-      updateSelectizeInput(
-        session,
-        paste0("LW",i),
-        choices = c("",sort(allFantasySkaters$Name)),
-        server =T
-      )
-    }
-  })
+    numLW_UI <<- numLW_d()
+    output$leftwings = renderUI({LW_UI})
+    reactiveValue(runif(1))
+  }))
   
-  # Right wings UI
-  output$rightwings = renderUI({
-    return(lapply(1:numRW_d(), function(i) {
-      selectizeInput(
-        paste0("RW",i),
-        label = NULL,
-        choices = "",
-        selected = ""
-      )
-    }))
-  })
-  
-  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
-    if (numRW_d() != numRW_UI) {
-      numRW_UI <<- numRW_d()
-    }
-    
-    for (i in 1:numRW_UI) {
-      updateSelectizeInput(
-        session,
-        paste0("RW",i),
-        choices = c("",sort(allFantasySkaters$Name)),
-        server =T
-      )
-    }
-  })
-  
-  # Defensemen  UI
-  output$defensemen = renderUI({
-    return(lapply(1:numD_d(), function(i) {
-      selectizeInput(
-        paste0("D",i),
-        label = NULL,
-        choices = "",
-        selected = ""
-      )
-    }))
-  })
-  
-  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
-    for (i in 1:numD_UI) {
-      if (numD_d() != numD_UI) {
-        numD_UI <<- numD_d()
+  # RW UI
+  RW_UI <<- list()
+  observeEvent(numRW_d(), suppressWarnings({
+    if (numRW_UI < numRW_d()) {
+      diff = numRW_d() - numRW_UI
+      
+      for (i in 1:diff) {
+        RW_UI[[i+numRW_UI]] <<-
+          selectizeInput(
+            paste0("RW",i+numRW_UI),
+            label = NULL,
+            choices = c("",sort(allFantasySkaters$Name)),
+            selected = ""
+          )
       }
-      updateSelectizeInput(
-        session,
-        paste0("D",i),
-        choices = c("",sort(allFantasySkaters$Name)),
-        server =T
-      )
+    } else if (numRW_UI > numRW_d()) {
+      diff = numRW_UI - numRW_d()
+      
+      RW_UI <<- RW_UI[-c((numRW_UI+1-diff):numRW_UI)]
+      
     }
-  })
+    numRW_UI <<- numRW_d()
+    output$rightwings = renderUI({RW_UI})
+    reactiveValue(runif(1))
+  }))
   
-  # Goalies  UI
-  output$goalies = renderUI({
-    return(lapply(1:numG_d(), function(i) {
-      selectizeInput(
-        paste0("G",i),
-        label = NULL,
-        choices = "",
-        selected = ""
-      )
-    }))
-  })
-  
-  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
-    if (numG_d() != numG_UI) {
-      numG_UI <<- numG_d()
+  # D UI
+  D_UI <<- list()
+  observeEvent(numD_d(), suppressWarnings({
+    if (numD_UI < numD_d()) {
+      diff = numD_d() - numD_UI
+      
+      for (i in 1:diff) {
+        D_UI[[i+numD_UI]] <<-
+          selectizeInput(
+            paste0("D",i+numD_UI),
+            label = NULL,
+            choices = c("",sort(allFantasySkaters$Name)),
+            selected = ""
+          )
+      }
+    } else if (numD_UI > numD_d()) {
+      diff = numD_UI - numD_d()
+      
+      D_UI <<- D_UI[-c((numD_UI+1-diff):numD_UI)]
+      
     }
-    for (i in 1:numG_UI) {
-      updateSelectizeInput(
-        session,
-        paste0("G",i),
-        choices = c("",sort(allFantasyGoalies$Name)),
-        server =T
-      )
-    }
-  })
+    numD_UI <<- numD_d()
+    output$defensemen = renderUI({D_UI})
+    reactiveValue(runif(1))
+  }))
   
   # Misc UI
-  output$misc = renderUI({
-    return(lapply(1:numMisc_d(), function(i) {
-      selectizeInput(
-        paste0("Misc",i),
-        label = NULL,
-        choices = "",
-        selected = ""
-      )
-    }))
-  })
-  
-  observeEvent(c(reactiveValue1_d()),ignoreNULL = FALSE, priority=3,{
-    if (numMisc_d() != numMisc_UI) {
-      numMisc_UI <<- numMisc_d()
+  Misc_UI <<- list()
+  observeEvent(numMisc_d(), suppressWarnings({
+    if (numMisc_UI < numMisc_d()) {
+      diff = numMisc_d() - numMisc_UI
+      
+      for (i in 1:diff) {
+        Misc_UI[[i+numMisc_UI]] <<-
+          selectizeInput(
+            paste0("Misc",i+numMisc_UI),
+            label = NULL,
+            choices = c("",sort(allFantasySkaters$Name)),
+            selected = ""
+          )
+      }
+    } else if (numMisc_UI > numMisc_d()) {
+      diff = numMisc_UI - numMisc_d()
+      
+      Misc_UI <<- Misc_UI[-c((numMisc_UI+1-diff):numMisc_UI)]
+      
     }
-    for (i in 1:numMisc_UI) {
-      updateSelectizeInput(
-        session,
-        paste0("Misc",i),
-        choices = c("",sort(allFantasySkaters$Name)),
-        server =T
-      )
-    }
-  })
+    numMisc_UI <<- numMisc_d()
+    output$misc = renderUI({Misc_UI})
+    reactiveValue(runif(1))
+  }))
   
+  # G UI
+  G_UI <<- list()
+  observeEvent(numG_d(), suppressWarnings({
+    if (numG_UI < numG_d()) {
+      diff = numG_d() - numG_UI
+      
+      for (i in 1:diff) {
+        G_UI[[i+numG_UI]] <<-
+          selectizeInput(
+            paste0("G",i+numG_UI),
+            label = NULL,
+            choices = c("",sort(allFantasyGoalies$Name)),
+            selected = ""
+          )
+      }
+    } else if (numG_UI > numG_d()) {
+      diff = numG_UI - numG_d()
+      
+      G_UI <<- G_UI[-c((numG_UI+1-diff):numG_UI)]
+      
+    }
+    numG_UI <<- numG_d()
+    output$goalies = renderUI({G_UI})
+    reactiveValue(runif(1))
+  }))
   
   # Dynamically update global team dataframe
   observeEvent(c(input$C1,input$C2,input$C3,input$C4,input$C5,input$C6,input$C7,input$C8,input$C9,
@@ -1045,9 +1066,10 @@ shinyServer(function(input, output, session) {
                  input$D1,input$D2,input$D3,input$D4,input$D5,input$D6,input$D7,input$D8,input$D9,
                  input$G1,input$G2,input$G3,input$G4,input$G5,input$G6,input$G7,input$G8,input$G9,
                  input$Misc1,input$Misc2,input$Misc3,input$Misc4,input$Misc5,input$Misc6,input$Misc7,input$Misc8,input$Misc9),{
-    updateTeamRV(runif(1))
-    
-  })
+                   updateTeamRV(runif(1))
+                   
+                 })
+
   
   teamGLOB_r = reactiveValues() 
   observeEvent(updateTeamRV_d(),{
@@ -1154,18 +1176,18 @@ shinyServer(function(input, output, session) {
     teamGLOB_r$df  = teamGLOB
     
     # Update team composition filters
-    updateSelectInput(session,"numLW",selected ="0")
-    updateSelectInput(session,"numC",selected ="0")
-    updateSelectInput(session,"numRW",selected ="0")
-    updateSelectInput(session,"numD",selected ="0")
-    updateSelectInput(session,"numMisc",selected ="0")
-    updateSelectInput(session,"numG",selected ="0")
-    updateSelectInput(session,"numLW",selected =as.character(sum(teamGLOB$Position=="LW")))
-    updateSelectInput(session,"numC",selected =as.character(sum(teamGLOB$Position=="C")))
-    updateSelectInput(session,"numRW",selected =as.character(sum(teamGLOB$Position=="RW")))
-    updateSelectInput(session,"numD",selected =as.character(sum(teamGLOB$Position=="D")))
-    updateSelectInput(session,"numMisc",selected =as.character(sum(teamGLOB$Position=="Misc")))
-    updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
+    updateSelectInput(session,"numLW",selected =1)
+    updateSelectInput(session,"numC",selected =1)
+    updateSelectInput(session,"numRW",selected =1)
+    updateSelectInput(session,"numD",selected =1)
+    updateSelectInput(session,"numMisc",selected =1)
+    updateSelectInput(session,"numG",selected =1)
+    updateSelectInput(session,"numLW",selected =sum(teamGLOB$Position=="LW"))
+    updateSelectInput(session,"numC",selected =sum(teamGLOB$Position=="C"))
+    updateSelectInput(session,"numRW",selected =sum(teamGLOB$Position=="RW"))
+    updateSelectInput(session,"numD",selected =sum(teamGLOB$Position=="D"))
+    updateSelectInput(session,"numMisc",selected =sum(teamGLOB$Position=="Misc"))
+    updateSelectInput(session,"numG",selected =sum(teamGLOB$Position=="G"))
   })
   
   # Load team from Yahoo league
@@ -1175,24 +1197,25 @@ shinyServer(function(input, output, session) {
       team[1:nrow(leaguerosters),'Name'] = leaguerosters$player_name_full
       team$Position = leaguerosters$selected_position_position
       team = left_join(team, playernames[,c('Name','ID')],by = 'Name')
-      team = team[leaguerosters$team_name==input$yahooteam,]
+      team = team[leaguerosters$team_name==input$yahooteam &
+                  !is.na(leaguerosters$team_name),]
       team = team[,c("Name","Position","ID")]
       teamGLOB <<- team
       teamGLOB_r$df  = teamGLOB
       
       # Update team composition filters
-      updateSelectInput(session,"numLW",selected ="0")
-      updateSelectInput(session,"numC",selected ="0")
-      updateSelectInput(session,"numRW",selected ="0")
-      updateSelectInput(session,"numD",selected ="0")
-      updateSelectInput(session,"numMisc",selected ="0")
-      updateSelectInput(session,"numG",selected ="0")
-      updateSelectInput(session,"numLW",selected =as.character(sum(teamGLOB$Position=="LW")))
-      updateSelectInput(session,"numC",selected =as.character(sum(teamGLOB$Position=="C")))
-      updateSelectInput(session,"numRW",selected =as.character(sum(teamGLOB$Position=="RW")))
-      updateSelectInput(session,"numD",selected =as.character(sum(teamGLOB$Position=="D")))
-      updateSelectInput(session,"numMisc",selected =as.character(sum(teamGLOB$Position=="Misc")))
-      updateSelectInput(session,"numG",selected =as.character(sum(teamGLOB$Position=="G")))
+      updateSelectInput(session,"numLW",selected =1)
+      updateSelectInput(session,"numC",selected =1)
+      updateSelectInput(session,"numRW",selected =1)
+      updateSelectInput(session,"numD",selected =1)
+      updateSelectInput(session,"numMisc",selected =1)
+      updateSelectInput(session,"numG",selected =1)
+      updateSelectInput(session,"numLW",selected =sum(teamGLOB$Position=="LW"))
+      updateSelectInput(session,"numC",selected =sum(teamGLOB$Position=="C"))
+      updateSelectInput(session,"numRW",selected =sum(teamGLOB$Position=="RW"))
+      updateSelectInput(session,"numD",selected =sum(teamGLOB$Position=="D"))
+      updateSelectInput(session,"numMisc",selected =sum(teamGLOB$Position=="Misc"))
+      updateSelectInput(session,"numG",selected =sum(teamGLOB$Position=="G"))
       
     }
     
@@ -1201,7 +1224,7 @@ shinyServer(function(input, output, session) {
   
   
   # fill in player names
-  observeEvent(c(reactiveValue2_d()), priority = 2, {
+  observeEvent(c(reactiveValue1_d()), priority = 2, {
 
     if (exists("teamGLOB")) {
       for (i in 1:numLW_d()) {
@@ -1278,18 +1301,14 @@ shinyServer(function(input, output, session) {
           playerID = team$ID[i]
           if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))) {
             playerData = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))
-            playerTeam = playerData$Tm[nrow(playerData)]
           } else {
             playerData = read.csv(paste0(currDir,"/Data/Players/dummyfileskater.csv"))[-1,]
-            playerTeam = ""
           }
           
           if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
             playerDataLS = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))
-            playerTeamLS = playerDataLS$Tm[nrow(playerDataLS)]
           } else {
             playerDataLS = read.csv(paste0(currDir,"/Data/Players/dummyfileskater.csv"))[-1,]
-            playerTeamLS = ""
           }
           
           # Format dates
@@ -1299,7 +1318,6 @@ shinyServer(function(input, output, session) {
           # Filter based on chosen date range if needed
           if (input$teamStatRange == "ls") {
             playerData = playerDataLS
-            playerTeam = playerTeamLS
           } else if (input$teamStatRange != "s") {
             playerData = playerData[playerData$Date > today()-as.numeric(input$teamStatRange),]
           }
@@ -1319,21 +1337,23 @@ shinyServer(function(input, output, session) {
           # Append line #/pp line #
           lineData = data.frame()
           if (team$Name[i] %in% playerlines$Player) {
-            lineData[1,"Linemate 1"] = playerlines$Linemate1[playerlines$Player == team$Name[i]]
-            lineData[1,"Linemate 2"] = playerlines$Linemate2[playerlines$Player == team$Name[i]]
+            lineData[1,"Linemate 1"] = substr(playerlines$Linemate1[playerlines$Player == team$Name[i]],1,
+                                              nchar(playerlines$Linemate1[playerlines$Player == team$Name[i]])-6)
+            lineData[1,"Linemate 2"] = substr(playerlines$Linemate2[playerlines$Player == team$Name[i]],1,
+                                              nchar(playerlines$Linemate2[playerlines$Player == team$Name[i]])-6)
             lineData[1,"Line"] = ordinal(playerlines$Line[playerlines$Player == team$Name[i]])
-            lineData[1,"PP Line"] = ordinal(playerlines$PP[playerlines$Player == team$Name[i]])
+            lineData[1,"PP"] = ordinal(playerlines$PP[playerlines$Player == team$Name[i]])
             
           } else {
             lineData[1,"Linemate 1"] = "<i>Unknown</i>"
             lineData[1,"Linemate 2"] = "<i>Unknown</i>"
             lineData[1,"Line"] = "<i>NA</i>"
-            lineData[1,"PP Line"] = "<i>NA</i>"
+            lineData[1,"PP"] = "<i>NA</i>"
           }
           
           # Append/merge all info
           playerData = cbind(Pos. = team$Position[i],
-                             Name = paste0(team$Name[i]," (",playerTeam,")"),
+                             Name = team$Name[i],
                              lineData,
                              `FT PTS` = NA,
                              playerData)
@@ -1360,18 +1380,14 @@ shinyServer(function(input, output, session) {
           playerID = team$ID[i]
           if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))) {
             playerData = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))
-            playerTeam = playerData$Tm[nrow(playerData)]
           } else {
             playerData = read.csv(paste0(currDir,"/Data/Players/dummyfilegoalie.csv"))[-1,]
-            playerTeam = ""
-            
+
           }
           if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
             playerDataLS = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))
-            playerTeamLS = playerDataLS$Tm[nrow(playerDataLS)]
           } else {
             playerDataLS = read.csv(paste0(currDir,"/Data/Players/dummyfilegoalie.csv"))[-1,]
-            playerTeamLS = ""
           }
           
           # Format dates
@@ -1381,7 +1397,6 @@ shinyServer(function(input, output, session) {
           # Filter based on chosen date range if needed
           if (input$teamStatRange == "ls") {
             playerData = playerDataLS
-            playerTeam = playerTeamLS
           } else if (input$teamStatRange != "s") {
             playerData = playerData[playerData$Date >= today()-as.numeric(input$teamStatRange),]
           }
@@ -1394,7 +1409,7 @@ shinyServer(function(input, output, session) {
                       Saves = sum(Goalie.Stats_SV),
                       GA = sum(Goalie.Stats_GA))
           playerData = cbind(Pos. = team$Position[i],
-                             Name = paste0(team$Name[i]," (",playerTeam,")"),
+                             Name = team$Name[i],
                              `FT PTS` = NA,
                              playerData)
           
@@ -1443,11 +1458,9 @@ shinyServer(function(input, output, session) {
         reactable(
           teamSkaterData,
           defaultColDef = colDef(
-            cell = function(value) format(value, nsmall = 1),
             align = "center",
             headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
             style = skaterTableStyle,
-            width = 0,
             html = T,
             vAlign ="center"
           ),
@@ -1467,17 +1480,18 @@ shinyServer(function(input, output, session) {
             `Line` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
                               headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
                               vAlign ="center"),
-            `PP Line` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+            `PP` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
                                   headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
                                  vAlign ="center"),
             Row = colDef(show=F)
           ),
+          wrap = FALSE, 
           outlined = TRUE, 
           borderless = TRUE,
           highlight = TRUE,
           striped = TRUE,
           defaultPageSize = 100,
-          fullWidth = T,
+          fullWidth = TRUE,
           theme = reactableTheme(
             style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
                          ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
@@ -1509,7 +1523,6 @@ shinyServer(function(input, output, session) {
         reactable(
           teamGoalieData,
           defaultColDef = colDef(
-            cell = function(value) format(value, nsmall = 1),
             align = "center",
             headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75, maxWidth=75),
             style = goalieTableStyle,
@@ -1524,14 +1537,20 @@ shinyServer(function(input, output, session) {
             Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=200,maxWidth=200),
                           headerStyle = list(background = "#deedf7",fontSize=16,minWidth=200,maxWidth=200),
                           sticky = "left",vAlign ="center"),
+            Shutouts = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
+                              vAlign ="center"),
             Row = colDef(show=F)
+            
           ),
           outlined = TRUE, 
           borderless = TRUE,
           highlight = TRUE,
           defaultPageSize = 100,
-          striped= T,
-          fullWidth = T,
+          striped= TRUE,
+          fullWidth = TRUE,
+          wrap = FALSE,
+          resizable = TRUE,
           theme = reactableTheme(
             style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
                          ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
@@ -1579,7 +1598,6 @@ shinyServer(function(input, output, session) {
   ## Account creation/login ===============================
   # Create userbase file if one does not exist, otherwise read in user base
   if (!file.exists(paste0(currDir,"/Data/Users/user_base.rds"))) {
-    dir.create(paste0(currDir,"/Data/Users/Tokens"))
     user_base <<- tibble::tibble(
       user = "testuser",
       password = purrr::map_chr("pass1", sodium::password_store),
@@ -1587,8 +1605,15 @@ shinyServer(function(input, output, session) {
       ID = 1,
       favteam = "Detroit Red Wings"
     )
-    
     saveRDS(user_base, paste0(currDir,"/Data/Users/user_base.rds"))
+    
+    
+    for (i in 1:nrow(user_base)) {
+      dir.create(paste0(currDir,"/Data/Users/",user_base$user[i]),recursive = TRUE)
+    }
+    
+    
+    
   } else {
     user_base <<- readRDS(paste0(currDir,"/Data/Users/user_base.rds"))
   }
@@ -1647,9 +1672,8 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$`login-button`, ignoreInit = T, delay(1000,{
-    print(file.exists(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds")))
-    if (file.exists(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))) {
-      token <<- readRDS(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))
+    if (file.exists(paste0(currDir,"/Data/Users/",credentials()$info[1],"/",credentials()$info[1],".Rds"))) {
+      token <<- readRDS(paste0(currDir,"/Data/Users/",credentials()$info[1],"/",credentials()$info[1],".Rds"))
       token$refresh()
       hideElement("yahooconnect")
       updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status = "primary")
@@ -1728,8 +1752,8 @@ shinyServer(function(input, output, session) {
   # "Connect to yahoo" button
   observeEvent(input$yahooconnect,ignoreInit = T, {
     
-    if (file.exists(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))) {
-      token <<- readRDS(paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))
+    if (file.exists(paste0(currDir,"/Data/Users/",credentials()$info[1],"/",credentials()$info[1],".Rds"))) {
+      token <<- readRDS(paste0(currDir,"/Data/Users/",credentials()$info[1],"/",credentials()$info[1],".Rds"))
       token$refresh()
       hideElement("yahooconnect")
       updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status = "primary")
@@ -1774,7 +1798,7 @@ shinyServer(function(input, output, session) {
                                   myapp,
                                   credentials = oauth2.0_access_token(httr::oauth_endpoints("yahoo"),myapp,code),
                                   cache = 'Data/test.token')
-        saveRDS(token,file = paste0(currDir,"/Data/Users/Tokens/",credentials()$info[1],".Rds"))
+        saveRDS(token,file = paste0(currDir,"/Data/Users/",credentials()$info[1],"/",credentials()$info[1],".Rds"))
         output$codetext = renderUI({
           HTML('<p style="color:green;font-weight:700;font-size:16px;">Successfully connected!</p>')
         })
