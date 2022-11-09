@@ -27,12 +27,6 @@ enableBookmarking(store="server")
 currDir <<- paste0('C:/Users/Meguel/Desktop/nhl/Fantasy-Hockey-Analyzer')
 setwd(currDir)
 
-# Setup extended js code to allow dynamic collapsing of boxes
-collapsejs = "
-shinyjs.collapse = function(boxid) {
-$('#' + boxid).closest('.box').find('[data-widget=collapse]').click();
-}
-"
 
 scrollbarjs = '
 $(document).ready(function(){
@@ -44,28 +38,51 @@ $(document).ready(function(){
 });
 '
 
-# Function to check if box is expanded
-collapseInput = function(inputId, boxId) {
-  tags$script(
-    sprintf(
-      "$('#%s').closest('.box').on('hidden.bs.collapse', function () {Shiny.setInputValue('%s', true);})",
-      boxId, inputId
-    ),
-    sprintf(
-      "$('#%s').closest('.box').on('shown.bs.collapse', function () {Shiny.setInputValue('%s', false);})",
-      boxId, inputId
-    )
-  )
-}
-
 # Read in all players, current lines, and nhl team names/abvs
 playernames <<- read.csv(paste0(currDir,"/Data/PlayerNames.csv"))
 playerlines <<- read.csv(paste0(currDir,"/Data/PlayerLines.csv"))
 nhlteams <<- read.csv(paste0(currDir,"/Data/TeamNames.csv"))
 
 
-# Get current season
+# Get current season and NHL schedule (and remaining games this+next week)
 currentSeason <<- as.integer(lubridate::quarter(Sys.Date(), with_year = TRUE, fiscal_start = 10))
+seasonSchedule <<- read.csv(paste0(currDir,"/Data/Schedule/",currentSeason,".csv"))
+
+# Current week
+gamesCurrWeek <<- data.frame()
+gamesCurrWeek[1:nrow(nhlteams),'teamabv'] <<- nhlteams[,'teamabv']
+
+tempHome = data.frame(count_home = colSums(table(seasonSchedule[seasonSchedule$Date >= Sys.Date() &
+                                        seasonSchedule$Date <=  ceiling_date(Sys.Date(), "week"),
+                                        c('Date','HomeABV')])))
+tempHome = cbind(teamabv = rownames(tempHome),tempHome)
+tempVis = data.frame(count_vis = colSums(table(seasonSchedule[seasonSchedule$Date >= Sys.Date() &
+                                                             seasonSchedule$Date <=  ceiling_date(Sys.Date(), "week"),
+                                                           c('Date','VisABV')])))
+tempVis = cbind(teamabv = rownames(tempVis),tempVis)
+
+gamesCurrWeek <<- left_join(gamesCurrWeek,tempHome)
+gamesCurrWeek <<- left_join(gamesCurrWeek,tempVis)
+gamesCurrWeek[is.na(gamesCurrWeek)] <<- 0
+gamesCurrWeek$count <<- gamesCurrWeek$count_home + gamesCurrWeek$count_vis
+
+# Next week
+gamesNextWeek <<- data.frame()
+gamesNextWeek[1:nrow(nhlteams),'teamabv'] <<- nhlteams[,'teamabv']
+
+tempHome = data.frame(count_home = colSums(table(seasonSchedule[seasonSchedule$Date >= floor_date(Sys.Date()+7,'week',1) &
+                                                                  seasonSchedule$Date <=  ceiling_date(Sys.Date()+7, "week"),
+                                                                c('Date','HomeABV')])))
+tempHome = cbind(teamabv = rownames(tempHome),tempHome)
+tempVis = data.frame(count_vis = colSums(table(seasonSchedule[seasonSchedule$Date >= floor_date(Sys.Date()+7,'week',1) &
+                                                                seasonSchedule$Date <=  ceiling_date(Sys.Date()+7, "week"),
+                                                              c('Date','VisABV')])))
+tempVis = cbind(teamabv = rownames(tempVis),tempVis)
+
+gamesNextWeek <<- left_join(gamesNextWeek,tempHome)
+gamesNextWeek <<- left_join(gamesNextWeek,tempVis)
+gamesNextWeek[is.na(gamesNextWeek)] <<- 0
+gamesNextWeek$count <<- gamesNextWeek$count_home + gamesNextWeek$count_vis
 
 
 # Get current season data for skaters/goalies
@@ -106,9 +123,7 @@ sidebar = dashboardSidebar(
 )
 ## Main Body =================================
 body <- dashboardBody(
-  #use_theme(mytheme),
   useShinyjs(),
-  extendShinyjs(text = collapsejs,functions = c("collapse")),
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "test.css"),
     tags$style(HTML('.box-header .box-title {display: block;}'),
@@ -129,19 +144,25 @@ body <- dashboardBody(
                 input[type=number]::-webkit-outer-spin-button,
                 input[type=number]::-webkit-inner-spin-button {
                       -webkit-appearance: none;
-                      margin: 0;}
-               "),
+                      margin: 0;}"
+               ),
+               HTML("
+                  .selectize-control.single .selectize-input:after{
+                  content: none;
+                  }"
+               ),
                HTML('#login-button {margin-top: 10px}'),
                HTML('#loginopen {margin-top: 10px}'),
                HTML('#createacc {margin-top: 10px;
                                  margin-right: 20px}'),
                HTML('.modal-content {border: 2px solid #000000;
                                      background: #f6f8fc}'),
-               HTML('#logout-button {display: block !important}')
+               HTML('#logout-button {display: block !important}'),
+               HTML('#leaguesettingsbox {line-height: 0}')
                ),
     tags$style(type="text/css",
-               ".shiny-output-error { visibility: hidden; }",
-               ".shiny-output-error:before { visibility: hidden; }"),
+               ".shiny-output-error {visibility: hidden; }",
+               ".shiny-output-error:before {visibility: hidden; }"),
     tags$script(HTML(scrollbarjs)),
     tags$script("
       Shiny.addCustomMessageHandler('gear_click', function(value) {
@@ -248,9 +269,7 @@ body <- dashboardBody(
                   )
                 ),
                 reactableOutput("playerStats")
-              ),
-              collapseInput(inputId = "iscolseasonrankingbox", boxId = "seasonrankingbox"),
-              collapseInput(inputId = "iscolseasonstatsbox", boxId = "seasonstatsbox")
+              )
             )
     ),
     
@@ -339,140 +358,17 @@ body <- dashboardBody(
                      collapsible = TRUE,
                      collapsed = FALSE,
                      column(width = 12, align ="center",
-                            h1("Fantasy Points Scoring")
-                     ),
-                     column(width =6, align = "center",
-                            h1("Skaters",style ="font-size:18px"), 
                             fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Goals:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("goalsFP",character(0),value = 6)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Assists:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("assistsFP",character(0),value = 4)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Points:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("pointsFP",character(0),value = 0)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("PPP:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("pppFP",character(0),value = 2)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("SHP:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("shFP",character(0),value = 3)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Shots:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("shotsFP",character(0),value = 0.6)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Hits:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("hitsFP",character(0),value = 0.4)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Blocks:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("blocksFP",character(0),value = 0.4)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("FOW:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("fowFP",character(0),value = 0)
-                              )
+                              radioGroupButtons("leaguetype",h1("League Type"),
+                                                choices = c("H2H Pts" = "h2hp",
+                                                            "H2H" = "h2h",
+                                                            "Roto" = "roto",
+                                                            "Pts Only" = "points"),
+                                                status = "primary")
                             )
+                            
                      ),
-                     column(width =6, align = "center",
-                            h1("Goalies",style ="font-size:18px"), 
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("GS:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("gsFP",character(0),value = 1)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Wins:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("winsFP",character(0),value = 5)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("GA:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("gaFP",character(0),value = -3)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("Saves:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("savesFP",character(0),value = 0.6)
-                              )
-                            ),
-                            fluidRow(
-                              column(width = 5,align = "right",
-                                     br(),
-                                     h2("SO:")
-                              ),
-                              column(width = 7,align = "left",
-                                     numericInput("soFP",character(0),value = 5)
-                              )
-                            )
-                     )
+                     uiOutput("leaguesettings")
                    )
             ),
             column(width = 12,

@@ -1,13 +1,16 @@
 import pandas as pd
+import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import os
 import re
 import fiscalyear
+import random
 from lxml.html import fromstring
 from itertools import cycle
 from io import StringIO
 import time
+import unicodedata
 fiscalyear.START_MONTH = 10
 currentSeason = fiscalyear.FiscalYear.current().fiscal_year
 
@@ -153,82 +156,86 @@ def pullPlayerStats(seasons,playerType):
                         img.write(requests.get(imgurl).content)
                         img.close()
 
-def getPlayerNames(currentSeason):
-    # Get proxy list and headers
-    #proxies = get_proxies('https://www.hockey-reference.com/')
-    headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36'}
+def getPlayerNames(seasons):
     
     # Get list of all playerIDs in data folder
-    playerIDs = next(os.walk("Data/Players/"))[1]
+    localPlayerIDs = next(os.walk("Data/Players/"))[1]
     
-    # Get list of existing data in PlayerNames file
-    existingData = pd.read_csv("Data/PlayerNames.csv")
-    existingIDs = list(existingData['ID'])
+    playerNamesDF = pd.DataFrame({"ID":localPlayerIDs})
+    playerNamesDF['Name'] = np.nan
+    playerNamesDF['Position'] = np.nan
     
-    # Find player name from website and save to csv
-    playerNames = list(existingData['Name'])
-    playerPositions = list(existingData['Position'])
-    for player in playerIDs:
-        if player not in existingIDs:
-            attempts = 0
-            while attempts < 5:
-                time.sleep(5) 
-                try:
-                    print("Getting player info for",player)
-                    url = "https://www.hockey-reference.com/players/"+player[0]+"/"+player+".html"
-                    # proxy = random.choice(proxies)
-                    # proxy_Dict = { 'http' : 'http://'+proxy,
-                    #                 'https' : 'https://'+proxy,
-                    #   }
-                    page = requests.get(url,headers = headers,timeout=5)
-                    print(page.status_code)
-                    soup = BeautifulSoup(page.text, 'lxml')
-                    metadata = soup.find_all('div',id = 'meta')
-                    playerName = metadata[0].find('span').text.title()
-                    position = metadata[0].find('p').text
-                    position = position.replace("\n", " ")
-                    position = position.replace("\xa0", " ")
-                    position = re.search(' (.*?) ', position).group(1)
-                    playerPositions.append(position)
-                    existingIDs.append(player)
-                    
-                    # Get team abv from file if it exists
-                    if (os.path.exists("Data/Players/"+player+"/"+str(currentSeason)+".csv")):
-                        teamAbv = pd.read_csv("Data/Players/"+player+"/"+str(currentSeason)+".csv")['Tm'].tail(1).item()
-                        playerNames.append(playerName+" ("+teamAbv+")")
-                    else:
-                        playerNames.append(playerName)
-                    break
-                except:
-                    attempts += 1
-                    
-    playerNamesDF = pd.DataFrame(playerNames)
-    playerNamesDF.columns = ["Name"]
-    playerNamesDF['Position'] = playerPositions
-    playerNamesDF['ID'] = existingIDs
-    playerNamesDF = playerNamesDF.sort_values('Name')
-    playerNamesDF = playerNamesDF.reset_index(drop=True)
-    
-    # Standardize positions
-    playerNamesDF.loc[playerNamesDF['Position']=='W','Position'] = 'RW'
-    playerNamesDF.loc[playerNamesDF['Position']=='F','Position'] = 'C'
-    playerNamesDF.loc[playerNamesDF['Position']=='C/LW','Position'] = 'C'
-    playerNamesDF.loc[playerNamesDF['Position']=='C/RW','Position'] = 'C'
-    playerNamesDF.loc[playerNamesDF['Position']=='C/W','Position'] = 'C'
-    playerNamesDF.loc[playerNamesDF['Position']=='RW/C','Position'] = 'RW'
-    playerNamesDF.loc[playerNamesDF['Position']=='LW/C','Position'] = 'LW'
-    playerNamesDF.loc[playerNamesDF['Position']=='D/LW','Position'] = 'D'
-    playerNamesDF.loc[playerNamesDF['Position']=='D/RW','Position'] = 'D'
-    playerNamesDF.loc[playerNamesDF['Position']=='D/W','Position'] = 'D'
-    
-    # Add number to duplicated names
-    # dup = dict(Counter(playerNamesDF['Name']))
-    # l_uniq = unique(playerNamesDF['Name'],return_index=True)
-    # names = [name if i == 0 else name + ' (' + str(i+1) + ')' for name in playerNamesDF['Name'][sorted(l_uniq[1])] for i in range(dup[name])]
-    # playerNamesDF['Name'] = names
-    
-    playerNamesDF.to_csv("Data/PlayerNames.csv",index=False)
+    # If single season is used as input, convert to list of length 1
+    if type(seasons) is int:
+        seasons = [seasons]
         
+    for season in list(reversed(seasons)):
+        print("Getting playernames for "+str(season))
+        for playerType in ["skaters","goalies"]:
+            time.sleep(4)
+            url = "https://www.hockey-reference.com/leagues/NHL_"+str(season)+"_"+playerType+".html"
+            
+            # Store table text in dataframe
+            playertable = pd.read_html(url)[0]
+            playertable = playertable.droplevel(0,axis = 1)
+            playertable = playertable[playertable['Rk'] != 'Rk']
+            
+            # Get embedded player ids from table
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            table = soup.find('table')
+            
+            playerIDs = []
+            for tr in table.findAll("tr"):
+                trs = tr.findAll("td")
+                try:
+                    playerID = trs[0].find('a')['href'].rsplit("/")[3]
+                    playerID = playerID[:-5]
+                    playerIDs.append(playerID)
+                except:
+                    pass
+                
+            # Clean up player table and append to playernames DF
+            playertable['ID'] = playerIDs
+            if playerType == "goalies":
+                playertable['Pos'] = "G"
+            playertable["Player"] = playertable["Player"].str.title()
+            
+            # If player played for multiple teams, keep last team played for
+            playertable = playertable.loc[playertable['Tm']!= "TOT"]
+            playertable = playertable.drop_duplicates(subset=['ID'], keep='first')
+           
+            
+            # Append team abv to playername if currently playing this season
+            if season == currentSeason:
+                playertable['Tm'] = playertable['Tm'].replace("MTL","MON",regex=True)
+                playertable['Player'] = playertable['Player'] +" ("+playertable['Tm']+")"
+            
+            playertable = playertable.loc[:,['Player','Pos','ID']]
+            playertable = playertable.set_axis(['Name','Position','ID'],axis=1)
+            playertable.loc[playertable['Position']=='W','Position'] = 'RW'
+            playertable.loc[playertable['Position']=='F','Position'] = 'C'
+            playertable = playertable.set_index('ID')
+            
+            playerNamesDF = playerNamesDF.set_index("ID").combine_first(playertable).reset_index()
+        
+    # Convert all characters to ASCII standard
+    playerNamesDF = playerNamesDF.astype(str)
+    playerNamesDF["Name"] = playerNamesDF["Name"].apply(lambda val: unicodedata.normalize('NFKD', val).encode('ascii', 'ignore').decode())
+    playerNamesDF = playerNamesDF.replace('\\*', '',regex=True)
+    playerNamesDF = playerNamesDF.replace('Tim Stutzle', 'Tim Stuetzle',regex=True)
+    playerNamesDF = playerNamesDF.replace('Mitch Marner', 'Mitchell Marner',regex=True)
+    playerNamesDF = playerNamesDF.replace('Matthew Beniers', 'Matty Beniers',regex=True)
+    playerNamesDF = playerNamesDF.replace('Calvin Petersen', 'Cal Petersen',regex=True)
+    playerNamesDF = playerNamesDF.replace('Anthony Deangelo', 'Tony Deangelo',regex=True)
+    playerNamesDF = playerNamesDF.replace('Joshua Norris', 'Josh Norris',regex=True)
+    
+    # Save to file
+    playerNamesDF.to_csv("Data/PlayerNames.csv",index=False)
+
+
+
+
 def mergeSeasonStats(seasons):
     # Get list of all playerIDs in data folder
     playerIDs = next(os.walk("Data/Players/"))[1]
@@ -236,7 +243,6 @@ def mergeSeasonStats(seasons):
     # Get player names and positions
     playerNamesDF = pd.read_csv("Data/PlayerNames.csv")
 
-    
     # If single season is used as input, convert to list of length 1
     if type(seasons) is int:
         seasons = [seasons]
@@ -270,10 +276,14 @@ def mergeSeasonStats(seasons):
                         "Shots": playerdata['S'].sum(),
                         "Shot %": playerdata['S%'].mean(),
                         "FOW": playerdata['FOW'].sum(),
+                        "FOL": playerdata['FOL'].sum(),
                         "FO %": playerdata['FOW'].mean(),
                         "Hits": playerdata['HIT'].sum(),
                         "Blocks": playerdata['BLK'].sum(),
                         "PIM": playerdata['PIM'].sum(),
+                        "SH Goals": playerdata['Goals_SH'].sum(),
+                        "SH Assists": playerdata['Assists_SH'].sum(),
+                        "GWG": playerdata['Goals_GW'].sum()
                         
                     }
                     summarydata = pd.Series(summarydata).to_frame().T
@@ -295,10 +305,12 @@ def mergeSeasonStats(seasons):
                         "Age": playerdata['Age'].max(),
                         "GP": playerdata.shape[0],
                         "Wins": playerdata.loc[playerdata['DEC']=="W"].shape[0],
+                        "Losses": playerdata.loc[playerdata['DEC']=="L"].shape[0],
                         "GA": playerdata['Goalie Stats_GA'].sum(),
                         "SA": playerdata['Goalie Stats_SA'].sum(),
                         "SV %": playerdata['Goalie Stats_SV'].sum()/playerdata['Goalie Stats_SA'].sum(),
-                        "SO": playerdata['Goalie Stats_SO'].sum()
+                        "SO": playerdata['Goalie Stats_SO'].sum(),
+                        
                     }
                     summarydata = pd.Series(summarydata).to_frame().T
                     mergedDataGoalies = mergedDataGoalies.append(summarydata)
@@ -408,13 +420,52 @@ def getPlayerLines():
             
             allPlayerLines.loc[allPlayerLines['Player'].isin(PPLine), 'PP'] = i
     
-    #write to csv
+    # Convert all characters to ASCII standard
+    allPlayerLines['Player'] = allPlayerLines['Player'].apply(lambda val: unicodedata.normalize('NFKD', val).encode('ascii', 'ignore').decode())
+    allPlayerLines['Linemate1'] = allPlayerLines['Linemate1'].apply(lambda val: unicodedata.normalize('NFKD', val).encode('ascii', 'ignore').decode())
+    allPlayerLines['Linemate2'] = allPlayerLines['Linemate2'].apply(lambda val: unicodedata.normalize('NFKD', val).encode('ascii', 'ignore').decode())
+    
+    # Replace one-off issues with names
+    allPlayerLines = allPlayerLines.replace('Matthew Boldy', 'Matt Boldy',regex=True)
+    allPlayerLines = allPlayerLines.replace('Tim Stutzle', 'Tim Stuetzle',regex=True)
+    allPlayerLines = allPlayerLines.replace('Matthew Beniers', 'Matty Beniers',regex=True)
+    allPlayerLines = allPlayerLines.replace('Mitch Marner', 'Mitchell Marner',regex=True)
+    
+    # Write to csv
     allPlayerLines.to_csv("Data/PlayerLines.csv",index=False)
+
+
+def pullSeasonSchedule(currentSeason):
+    # page URL
+    url = "https://www.hockey-reference.com/leagues/NHL_"+str(currentSeason)+"_games.html"
     
+    # Season schedule
+    seasonschedule = pd.read_html(url)[0]
+    seasonschedule['Visitor'] = seasonschedule['Visitor'].str.replace(".","")
+    seasonschedule['Home'] = seasonschedule['Home'].str.replace(".","")
     
+    # Append team abv and sort by date
+    teamnames = pd.read_csv("Data/teamNames.csv")
+    seasonschedule = pd.merge(seasonschedule, teamnames, left_on='Visitor', right_on='teamname')
+    seasonschedule = seasonschedule.drop('teamname',axis=1)
+    seasonschedule = seasonschedule.rename(columns={"teamabv": "VisABV"})
+    seasonschedule = pd.merge(seasonschedule, teamnames, left_on='Home', right_on='teamname')
+    seasonschedule = seasonschedule.drop('teamname',axis=1)
+    seasonschedule = seasonschedule.rename(columns={"teamabv": "HomeABV"})
+    seasonschedule['Date'] = pd.to_datetime(seasonschedule['Date'])
+    seasonschedule = seasonschedule.sort_values('Date')
+    
+    # Save to file
+    if not os.path.exists("Data/Schedule/"):
+        os.makedirs("Data/Schedule/")
+    seasonschedule.to_csv("Data/Schedule/"+str(currentSeason)+".csv",index=False)
+    
+
+
 # Execute functions
 pullPlayerStats(currentSeason,"skaters")
 pullPlayerStats(currentSeason,"goalies")
-getPlayerNames(currentSeason)
+getPlayerNames(list(range(2010,currentSeason+1)))
 getPlayerLines()
 mergeSeasonStats(currentSeason)
+pullSeasonSchedule(currentSeason)

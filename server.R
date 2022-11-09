@@ -11,7 +11,14 @@ shinyServer(function(input, output, session) {
     } else {
       "#e9e9e9" #grey
     }
-  }  
+  }
+  
+  # tooltip funciton for reactables
+  with_tooltip <- function(value, tooltip) {
+    tags$abbr(style = "text-decoration: underline; text-decoration-style: dotted; cursor: help",
+              title = tooltip, value)
+  }
+  
   
   
   ## Set default attributes for UI elements =================================
@@ -266,19 +273,6 @@ shinyServer(function(input, output, session) {
                   selected = max(tableData$Season))
     }
   })
-  
-  # Expand UI boxes
-  # observeEvent(input$loadPlayerStats,once=T, ignoreInit = T, {
-  #     if (!isFALSE(input$iscolseasonstatsbox)) {
-  #       js$collapse("seasonstatsbox")
-  #     }
-  #     if (!isFALSE(input$iscolseasonrankingbox)) {
-  #       js$collapse("seasonrankingbox")
-  #     }
-  # 
-  # })
-  
-  
   
   
   ## Player Metrics - Season Stats =================================
@@ -806,8 +800,10 @@ shinyServer(function(input, output, session) {
     } else {
       output$teamloadchoices = renderUI(withProgress(message = "Loading data...", value = 0.5,{
         leagues <<- y_games(token)
-        leagueschoices = c(" " ="",split(leagues$league_id[leagues$league_season==currentSeason-1],
-                                         leagues$league_name[leagues$league_season==currentSeason-1]))
+        leagueschoices = c(" " ="",split(leagues$league_id[(leagues$league_season==currentSeason-1) &
+                                                            leagues$league_draft_status == "postdraft"],
+                                         leagues$league_name[(leagues$league_season==currentSeason-1) &
+                                                              leagues$league_draft_status == "postdraft"]))
         return(tagList(
           selectizeInput(
             "yahooleague",
@@ -821,8 +817,251 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # Show league settings depending on league type
+  observeEvent(input$leaguetype, {
+    if (input$leaguetype == "h2hp") {
+      output$leaguesettings = renderUI({
+        column(width=12,align = "center",
+          column(width =6, align = "center",
+                 h1("Skaters",style ="font-size:18px"), 
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("G:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("GFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("A:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("AFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("P:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("PFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("+/-:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("+/-FP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("PPG:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("PPGFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("PPA:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("PPAFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("PPP:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("PPPFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("SHG:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("SHGFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("SHA:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("SHAFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("SHP:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("SHPFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("GWG:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("GWGFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("SOG:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("SOGFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("HIT:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("HITFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("BLK:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("BLKFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("PIM:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("PIMFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("FOW:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("FOWFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("FOL:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("FOLFP",character(0),value = 0)
+                   )
+                 )
+          ),
+          column(width =6, align = "center",
+                 h1("Goalies",style ="font-size:18px"), 
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("GS:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("GSFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("W:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("WFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("L:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("LFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("GA:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("GAFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("SV:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("SVFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("SA:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("SAFP",character(0),value = 0)
+                   )
+                 ),
+                 fluidRow(
+                   column(width = 5,align = "right",
+                          br(),
+                          h2("SHO:")
+                   ),
+                   column(width = 7,align = "left",
+                          numericInput("SHOFP",character(0),value = 0)
+                   )
+                 )
+          )
+        )
+        
+      })
+      
+    } else {
+      output$leaguesettings = renderUI({
+        
+        
+        
+      })
+      
+    }
+    
+  })
+  
+  
   # Observe league choice
-  observeEvent(input$yahooleague, ignoreInit = T, withProgress(message = "Loading...",value = 0.2,{
+  observeEvent(input$yahooleague, ignoreInit = T,priority = 10, withProgress(message = "Loading...",value = 0.2,{
     if (input$yahooleague != "") {
       # Create new folder for league data if it doesnt exist
       if (!dir.exists(paste0(currDir,"/Data/Leagues/",input$yahooleague))) {
@@ -847,21 +1086,57 @@ shinyServer(function(input, output, session) {
         tempteamnames = left_join(tempteamnames,nhlteams)
         leaguerosters$player_editorial_team_abbr = tempteamnames$teamabv
         leaguerosters$player_name_full <<- toTitleCase(tolower(leaguerosters$player_name_full)) # title case
-        leaguerosters$player_name_full <<- gsub("(?<=^|\\.)([a-z])", "\\U\\1", leaguerosters$player_name_full, perl=TRUE) # captilize letters after periods
+        leaguerosters$player_name_full <<- gsub("(?<=^|\\.)([a-z])", "\\U\\1", leaguerosters$player_name_full, perl=TRUE) # capitalize letters after periods
         leaguerosters$player_name_full <<- paste0(leaguerosters$player_name_full," (",leaguerosters$player_editorial_team_abbr,")")
         
         # Save data
         saveRDS(teams,paste0(currDir,"/Data/Leagues/",input$yahooleague,"/teams.rds"))
         saveRDS(leaguerosters,paste0(currDir,"/Data/Leagues/",input$yahooleague,"/leaguerosters.rds"))
         
-
       } else {
         setProgress(value = 0.5)
+        # Read in existing league data
         teams <<- readRDS(paste0(currDir,"/Data/Leagues/",input$yahooleague,"/teams.rds"))
         leaguerosters <<- readRDS(paste0(currDir,"/Data/Leagues/",input$yahooleague,"/leaguerosters.rds"))
         
       }
       
+      # Replace player names in other dataframes with names from yahoo league roster
+      tempYahooNames = substr(leaguerosters$player_name_full,1,nchar(leaguerosters$player_name_full)-6)
+      tempAFG = allFantasyGoalies$Name
+      tempAFGindex = which(!grepl("\\(",tempAFG))
+      for (i in tempAFGindex) {
+        name = tempAFG[i]
+        if (name %in% tempYahooNames) {
+          allFantasyGoalies$Name[i] <<- leaguerosters$player_name_full[tempYahooNames == name]
+          
+        }
+      }
+      
+      tempAFS = allFantasySkaters$Name
+      tempAFSindex = which(!grepl("\\(",tempAFS))
+      for (i in tempAFSindex) {
+        name = tempAFS[i]
+        if (name %in% tempYahooNames) {
+          allFantasySkaters$Name[i] <<- leaguerosters$player_name_full[tempYahooNames == name]
+          
+        }
+      }
+      
+      
+      # Update league type
+      if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "headpoint") {
+        updateRadioGroupButtons(session,"leaguetype",selected = "h2hp")
+      } else if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "head") {
+        updateRadioGroupButtons(session,"leaguetype",selected = "h2h")
+      } else if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "roto") {
+        updateRadioGroupButtons(session,"leaguetype",selected = "roto")
+      } else if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "point") {
+        updateRadioGroupButtons(session,"leaguetype",selected = "points")
+      }
+      
+      
+      # Show league teams selector
       output$fantasyteam = renderUI({
         selectizeInput(
           "yahooteam",
@@ -871,6 +1146,62 @@ shinyServer(function(input, output, session) {
           width = '75%'
         )
       })
+    }
+  }))
+  
+  # Update league settings based on league type
+  observeEvent(input$yahooleague,ignoreInit = T,priority = 1, delay(250,{
+    if (input$yahooleague != "") {
+      if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "headpoint") {
+        # Pull league settings from yahoo
+        leaguesettings = y_league_settings(leagues$league_key[leagues$league_id==input$yahooleague],token)
+        statcat = leaguesettings$stat_categories[[1]]
+        statmod = leaguesettings$stat_modifiers[[1]]
+        
+        # Update inputs
+        statinputs = c("GFP","AFP","PFP","+/-FP","PPAFP","PPGFP","PPPFP","SHGFP","SHAFP","SHPFP", "GWGFP",
+                       "SFP","HITFP","BLKFP","FOWFP","FOLFP","GSFP","WFP","LFP","GAFP","SAFP","SVFP","SHOFP")
+        
+        # Box must be open to update settings
+        if (!input$leaguesettingsbox$collapsed) {
+          updateBox("leaguesettingsbox", action = "toggle")
+        }
+        
+        # Set all stat values to 0
+        for (i in 1:length(statinputs)) {
+          updateNumericInput(session,statinputs[i],value = 0)
+        }
+        
+        # Update stat values based on league settings
+        for (i in 1:nrow(statcat)) {
+          inputstr = paste0(statcat$display_name[i],"FP")
+          showElement(inputstr)
+          updateNumericInput(session,inputstr,value = as.numeric(statmod[i,2]))
+        }
+        
+        # Close box
+        if (!input$leaguesettingsbox$collapsed) {
+          updateBox("leaguesettingsbox", action = "toggle")
+        }
+        
+        
+        
+      } else if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "head") {
+        
+      } else if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "roto") {
+        
+      } else if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "point") {
+        
+      }
+    
+    } else {
+      # Update inputs
+      statinputs = c("GFP","AFP","PFP","+/-FP","PPAFP","PPGFP","PPPFP","SHGFP","SHAFP","SHPFP", "GWGFP",
+                     "SFP","HITFP","BLKFP","FOWFP","FOLFP","GSFP","WFP","LFP","GAFP","SAFP","SVFP","SHOFP")
+      # Set all stat values to 0
+      for (i in 1:length(statinputs)) {
+        updateNumericInput(session,statinputs[i],value = 0)
+      }
     }
   }))
   
@@ -1282,17 +1613,17 @@ shinyServer(function(input, output, session) {
   
   
   ## Fantasy Team - Team Stats Box ===============================
-  observeEvent(c(teamGLOB_r$df,input$goalsFP,input$assistsFP,input$pointsFP,
-                 input$pppFP,input$shFP,input$shotsFP,input$hitsFP,input$blocksFP,input$fowFP,
-                 input$gsFP,input$winsFP,input$gaFP,input$savesFP,input$soFP,input$teamStatRange,
+  observeEvent(c(teamGLOB_r$df,input$GFP,input$AFP,input$PFP,
+                 input$PPPFP,input$SHPFP,input$SOGFP,input$HITFP,input$BLKFP,
+                 input$GSFP,input$WFP,input$GAFP,input$SVFP,input$SHOFP,input$teamStatRange,
                  input$teamStatType),ignoreInit=T,{
     
     # Get currently chosen fantasy team
     team = teamGLOB_r$df
     
     # Create data table
-    teamSkaterData = as.data.frame(matrix(ncol=17,nrow=0))
-    teamGoalieData = as.data.frame(matrix(ncol=8,nrow=0))
+    teamSkaterData = as.data.frame(matrix(ncol=19,nrow=0))
+    teamGoalieData = as.data.frame(matrix(ncol=10,nrow=0))
     if (nrow(team)>0){
       for (i in 1:nrow(team)) {
         if (team$Position[i] != "G") {
@@ -1345,29 +1676,39 @@ shinyServer(function(input, output, session) {
             lineData[1,"PP"] = ordinal(playerlines$PP[playerlines$Player == team$Name[i]])
             
           } else {
-            lineData[1,"Linemate 1"] = "<i>Unknown</i>"
-            lineData[1,"Linemate 2"] = "<i>Unknown</i>"
+            lineData[1,"Linemate 1"] = "<i>NA</i>"
+            lineData[1,"Linemate 2"] = "<i>NA</i>"
             lineData[1,"Line"] = "<i>NA</i>"
             lineData[1,"PP"] = "<i>NA</i>"
+          }
+          
+          # Gets games remaining this week and next week
+          if (grepl('\\(',team$Name[i])) {
+            GRCW = gamesCurrWeek$count[gamesCurrWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
+            GRNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
+          } else {
+            GRCW = NA
+            GRNW = NA
           }
           
           # Append/merge all info
           playerData = cbind(Pos. = team$Position[i],
                              Name = team$Name[i],
                              lineData,
+                             GRCW = GRCW,
+                             GRNW = GRNW,
                              `FT PTS` = NA,
                              playerData)
           
           
           # Calculate fantasy points
-          playerData$`FT PTS` = input$goalsFP*playerData$Goals + input$assistsFP*playerData$Assists +
-            input$pointsFP*playerData$Points + input$pppFP*playerData$PPP + input$shFP*playerData$SHP + 
-            input$shotsFP*playerData$Shots + input$blocksFP*playerData$Blocks + input$hitsFP*playerData$Hits +
-            input$fowFP*playerData$FOW
+          playerData$`FT PTS` = input$GFP*playerData$Goals + input$AFP*playerData$Assists +
+            input$PFP*playerData$Points + input$PPPFP*playerData$PPP + input$SHPFP*playerData$SHP + 
+            input$SOGFP*playerData$Shots + input$BLKFP*playerData$Blocks + input$HITFP*playerData$Hits
           
           # Calc per game stats if needed
           if (input$teamStatType =="pg") {
-            playerData[,-c(1:6,8)] = round(playerData[,-c(1:6,8)]/playerData$GP,2)
+            playerData[,-c(1:8,10)] = round(playerData[,-c(1:8,10)]/playerData$GP,2)
           }
           
           # Append player data to team table
@@ -1400,6 +1741,15 @@ shinyServer(function(input, output, session) {
           } else if (input$teamStatRange != "s") {
             playerData = playerData[playerData$Date >= today()-as.numeric(input$teamStatRange),]
           }
+
+          # Gets games remaining this week and next week
+          if (grepl('\\(',team$Name[i])) {
+            GRCW = gamesCurrWeek$count[gamesCurrWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
+            GRNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
+          } else {
+            GRCW = NA
+            GRNW = NA
+          }
           
           # Get stat totals
           playerData = playerData %>%
@@ -1410,17 +1760,19 @@ shinyServer(function(input, output, session) {
                       GA = sum(Goalie.Stats_GA))
           playerData = cbind(Pos. = team$Position[i],
                              Name = team$Name[i],
+                             GRCW = GRCW,
+                             GRNW = GRNW,
                              `FT PTS` = NA,
                              playerData)
           
           
           # Calculate fantasy points
-          playerData$`FT PTS` = input$gsFP*playerData$GP + input$winsFP*playerData$Wins +
-            input$savesFP*playerData$Saves + input$soFP*playerData$Shutouts + input$gaFP*playerData$GA
+          playerData$`FT PTS` = input$GSFP*playerData$GP + input$WFP*playerData$Wins +
+            input$SVFP*playerData$Saves + input$SHOFP*playerData$Shutouts + input$GAFP*playerData$GA
           
           # Calc per game stats if needed
           if (input$teamStatType =="pg") {
-            playerData[,-c(1,2,4)] = round(playerData[,-c(1,2,4)]/playerData$GP,2)
+            playerData[,-c(1:4,6)] = round(playerData[,-c(1:4,6)]/playerData$GP,2)
           }
           
           # Append player data to team table
@@ -1433,10 +1785,10 @@ shinyServer(function(input, output, session) {
     }
     
     # Replace NA/INF with 0
-    teamSkaterData[,-c(1:6)][apply(teamSkaterData[,-c(1:6)],c(1,2),is.na)] = 0
-    teamSkaterData[,-c(1:6)][apply(teamSkaterData[,-c(1:6)],c(1,2),is.infinite)] = 0
-    teamGoalieData[,-c(1:6)][apply(teamGoalieData[,-c(1:6)],c(1,2),is.na)] = 0
-    teamGoalieData[,-c(1:6)][apply(teamGoalieData[,-c(1:6)],c(1,2),is.infinite)] = 0
+    teamSkaterData[,-c(1:8)][apply(teamSkaterData[,-c(1:8)],c(1,2),is.na)] = 0
+    teamSkaterData[,-c(1:8)][apply(teamSkaterData[,-c(1:8)],c(1,2),is.infinite)] = 0
+    teamGoalieData[,-c(1:4)][apply(teamGoalieData[,-c(1:4)],c(1,2),is.na)] = 0
+    teamGoalieData[,-c(1:4)][apply(teamGoalieData[,-c(1:4)],c(1,2),is.infinite)] = 0
     
     # Skater reactable
     if (nrow(teamSkaterData)>0) {
@@ -1480,9 +1832,15 @@ shinyServer(function(input, output, session) {
             `Line` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
                               headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
                               vAlign ="center"),
-            `PP` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+            PP = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
                                   headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
-                                 vAlign ="center"),
+                                 vAlign ="center",header = with_tooltip("PP", "Power Play Line")),
+            GRCW = colDef(style = skaterTableStyle,
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                            vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
+            GRNW = colDef(style = skaterTableStyle,
+                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                          vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
             Row = colDef(show=F)
           ),
           wrap = FALSE, 
@@ -1537,6 +1895,12 @@ shinyServer(function(input, output, session) {
             Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=200,maxWidth=200),
                           headerStyle = list(background = "#deedf7",fontSize=16,minWidth=200,maxWidth=200),
                           sticky = "left",vAlign ="center"),
+            GRCW = colDef(style = goalieTableStyle,
+                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                          vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
+            GRNW = colDef(style = goalieTableStyle,
+                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                          vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
             Shutouts = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
                               headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
                               vAlign ="center"),
