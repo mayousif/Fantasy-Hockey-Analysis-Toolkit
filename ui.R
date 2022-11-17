@@ -71,11 +71,11 @@ gamesNextWeek <<- data.frame()
 gamesNextWeek[1:nrow(nhlteams),'teamabv'] <<- nhlteams[,'teamabv']
 
 tempHome = data.frame(count_home = colSums(table(seasonSchedule[seasonSchedule$Date >= floor_date(Sys.Date()+7,'week',1) &
-                                                                  seasonSchedule$Date <=  ceiling_date(Sys.Date()+7, "week"),
+                                                                  seasonSchedule$Date <=  ceiling_date(Sys.Date()+7, "week",change_on_boundary=F),
                                                                 c('Date','HomeABV')])))
 tempHome = cbind(teamabv = rownames(tempHome),tempHome)
 tempVis = data.frame(count_vis = colSums(table(seasonSchedule[seasonSchedule$Date >= floor_date(Sys.Date()+7,'week',1) &
-                                                                seasonSchedule$Date <=  ceiling_date(Sys.Date()+7, "week"),
+                                                                seasonSchedule$Date <=  ceiling_date(Sys.Date()+7, "week",change_on_boundary=F),
                                                               c('Date','VisABV')])))
 tempVis = cbind(teamabv = rownames(tempVis),tempVis)
 
@@ -104,21 +104,29 @@ logos <<- read.csv(paste0(currDir,"/Data/Logos.csv"))
 ## Sidebar =================================
 sidebar = dashboardSidebar(
   width = "15%",
-  sidebarMenu(id = "tabs",
-              menuItem(
-                selected = TRUE,
-                "Fantasy Metrics", 
-                tabName = "teamstats", 
-                icon = icon("people-group")
-              ),    
-              menuItem(text = "Player Stats",
-                       startExpanded = TRUE,
-                       icon = icon("person-skating"),
-                       menuSubItem(selectizeInput("playerInput", 
-                                                  "Select Player",
-                                                  choices = NULL,
-                                                  selected = NULL),tabName = "playerstats",icon=NULL)
-              )
+  sidebarMenu(
+    id = "tabs",
+    menuItem(
+      selected = TRUE,
+      "Fantasy Metrics", 
+      tabName = "teamstats", 
+      icon = icon("people-group")
+    ),    
+    menuItem(
+      text = "Player Stats",
+      startExpanded = TRUE,
+      icon = icon("person-skating"),
+      menuSubItem(
+        tabName = "playerstats",
+        icon=NULL,
+        selectizeInput(
+          "playerInput", 
+          "Select Player",
+          choices = NULL,
+          selected = NULL
+        )
+      )
+    )
   )
 )
 ## Main Body =================================
@@ -172,247 +180,326 @@ body <- dashboardBody(
   ),
   tabItems(
     # Player stats tab
-    tabItem(tabName = "playerstats",
-            style = "overflow-x: hidden;overflow-y: auto;", 
-            fluidRow(
-              box(
-                id = "seasonrankingbox",
-                width = 4,
-                title = h4("Percentile Ranking"),
-                solidHeader=T,
-                status = "primary",
-                collapsible = TRUE,
-                collapsed = FALSE,
-                fluidRow(
-                  column(width = 3, align = "center",
-                         uiOutput("playerName"),
-                         uiOutput("playerImage")
-                  ),
-                  column(width=9,align = "center",
-                         fluidRow(
-                           column(width = 4, align = "center",
-                                  selectInput("playerRankSeason",h2("Season"),
-                                              choices = NA)
-                           ),
-                           column(width = 8, align = "center",
-                                  radioGroupButtons("playerRankType",
-                                                    label = h2("Stat Type"),
-                                                    choices = c("Total" = "tot",
-                                                                "Per Game" = "pg",
-                                                                "Per 60" = "p60"),
-                                                    selected = character(0),
-                                                    status = "primary")
-                           )
-                         ),
-                         fluidRow(
-                           column(width = 4, align = "center",
-                                  selectInput("playerRankGPFilter",h2("Min. GP"),
-                                              choices = c("1 GP" = 1, "5 GP"=5,"10 GP" = 10, "20 GP" = 20, "40 GP" = 40),
-                                              selected = "1 GP") 
-                           ),
-                           column(width = 8,align = "center",
-                                  pickerInput("playerRankPositionFilter",
-                                              label = h2("Positions"),
-                                              choices = NULL,
-                                              multiple=T,
-                                              width = '75%')
-                           )
-                         )
+    tabItem(
+      tabName = "playerstats",
+      style = "overflow-x: hidden;overflow-y: auto;", 
+      fluidRow(
+        box(
+          id = "seasonrankingbox",
+          width = 4,
+          title = h4("Percentile Ranking"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE,
+          fluidRow(
+            column(
+              width = 3, 
+              align = "center",
+              uiOutput("playerName"),
+              uiOutput("playerImage")
+            ),
+            column(
+              width=9,
+              align = "center",
+              fluidRow(
+                column(
+                  width = 4, 
+                  align = "center",
+                  selectInput(
+                    "playerRankSeason",
+                    h2("Season"),
+                    choices = NA
                   )
                 ),
-                fluidRow(
-                  column(width = 4,align="center", style = "padding-right:0px;padding-left:0px;",
-                         uiOutput("text1_1"),
-                         uiOutput("valueBox1_1"),
-                         uiOutput("text2_1"),
-                         uiOutput("valueBox2_1"),
-                         uiOutput("text3_1"),
-                         uiOutput("valueBox3_1")
-                  ),
-                  column(width = 4,align="center", style = "padding-right:0px;padding-left:0px;",
-                         uiOutput("text1_2"),
-                         uiOutput("valueBox1_2"),
-                         uiOutput("text2_2"),
-                         uiOutput("valueBox2_2"),
-                         uiOutput("text3_2"),
-                         uiOutput("valueBox3_2")
-                  ),
-                  column(width = 4,align="center", style = "padding-right:0px;padding-left:0px;",
-                         uiOutput("text1_3"),
-                         uiOutput("valueBox1_3"),
-                         uiOutput("text2_3"),
-                         uiOutput("valueBox2_3"),
-                         uiOutput("text3_3"),
-                         uiOutput("valueBox3_3")
+                column(
+                  width = 8, 
+                  align = "center",
+                  radioGroupButtons(
+                    "playerRankType",
+                    label = h2("Stat Type"),
+                    choices = c("Total" = "tot",
+                                "Per Game" = "pg",
+                                "Per 60" = "p60"),
+                    selected = character(0),
+                    status = "primary"
                   )
-                  
                 )
               ),
-              box(
-                id = "seasonstatsbox",
-                width = 8,
-                title = h4("Seasonal Summary"),
-                solidHeader=T,
-                status = "primary",
-                collapsible = TRUE,
-                collapsed = FALSE,
-                fluidRow(
-                  column(width = 3,align="center",
-                         radioGroupButtons("seasonStatsType",
-                                           label = h2("Stat Type"),
-                                           choices = c("Total" = "tot",
-                                                       "Per Game" = "pg",
-                                                       "Per 60" = "p60"),
-                                           selected = character(0),
-                                           status = "primary")
-                         
+              fluidRow(
+                column(
+                  width = 4, 
+                  align = "center",
+                  selectInput(
+                    "playerRankGPFilter",h2("Min. GP"),
+                    choices = c("1 GP" = 1, "5 GP"=5,"10 GP" = 10, "20 GP" = 20, "40 GP" = 40),
+                    selected = "1 GP"
                   )
                 ),
-                reactableOutput("playerStats")
+                column(
+                  width = 8,
+                  align = "center",
+                  pickerInput(
+                    "playerRankPositionFilter",
+                    label = h2("Positions"),
+                    choices = NULL,
+                    multiple=T,
+                    width = '75%'
+                  )
+                )
               )
             )
+          ),
+          fluidRow(
+            column(width = 4,align="center", style = "padding-right:0px;padding-left:0px;",
+                   uiOutput("text1_1"),
+                   uiOutput("valueBox1_1"),
+                   uiOutput("text2_1"),
+                   uiOutput("valueBox2_1"),
+                   uiOutput("text3_1"),
+                   uiOutput("valueBox3_1")
+            ),
+            column(width = 4,align="center", style = "padding-right:0px;padding-left:0px;",
+                   uiOutput("text1_2"),
+                   uiOutput("valueBox1_2"),
+                   uiOutput("text2_2"),
+                   uiOutput("valueBox2_2"),
+                   uiOutput("text3_2"),
+                   uiOutput("valueBox3_2")
+            ),
+            column(width = 4,align="center", style = "padding-right:0px;padding-left:0px;",
+                   uiOutput("text1_3"),
+                   uiOutput("valueBox1_3"),
+                   uiOutput("text2_3"),
+                   uiOutput("valueBox2_3"),
+                   uiOutput("text3_3"),
+                   uiOutput("valueBox3_3")
+            )
+          )
+        ),
+        box(
+          id = "seasonstatsbox",
+          width = 8,
+          title = h4("Seasonal Summary"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE,
+          fluidRow(
+            column(
+              width = 3,
+              align="center",
+              radioGroupButtons(
+                "seasonStatsType",
+                label = h2("Stat Type"),
+                choices = c("Total" = "tot",
+                            "Per Game" = "pg",
+                            "Per 60" = "p60"),
+                selected = character(0),
+                status = "primary"
+              )
+            )
+          ),
+          reactableOutput("playerStats")
+        )
+      )
     ),
     
     # Fantasy team stats tab
-    tabItem(tabName = "teamstats",
-            style = "overflow-x: hidden;overflow-y: auto;",
-            column(width = 9,
-                   box(
-                     id = "teamloadingbox",
-                     width = 12,
-                     title = h4("Create/Upload Team"),
-                     solidHeader=T,
-                     status = "primary",
-                     collapsible = TRUE,
-                     fluidRow(
-                       column(width = 4,align="center",
-                              radioGroupButtons("datasource",h1("Data Source"),choices = c("Local" = "loc"),status = "primary"),
-                              uiOutput("teamloadchoices"),
-                              uiOutput("fantasyteam")
-                              
-                       ),
-                       column(width=6,align="center",offset = 1,
-                              fluidRow(
-                                h1("Team Composition")
-                              ),
-                              fluidRow(
-                                column(width = 4,
-                                       selectInput("numLW",h2("LW"),1:9,selected=4)
-                                ),
-                                column(width = 4, 
-                                       selectInput("numC",h2("C"),1:9,selected=4)
-                                ),
-                                column(width = 4,
-                                       selectInput("numRW",h2("RW"),1:9,selected=4)
-                                )
-                              ),
-                              fluidRow(
-                                column(width = 4,
-                                       selectInput("numD",h2("D"),1:9,selected=4)
-                                ),
-                                column(width = 4,
-                                       selectInput("numMisc",h2("Misc (Util, IR, IR+)"),1:9,selected=4)
-                                ),
-                                column(width = 4,
-                                       selectInput("numG",h2("G"),1:9,selected=4)
-                                )
-                                
-                              )
-                       )
-                     ),
-                     fluidRow(
-                       column(width=2,align="center",
-                              h2("Left Wingers"),
-                              uiOutput("leftwings")
-                       ),
-                       column(width=2,align="center",
-                              h2("Centers"),
-                              uiOutput("centers")
-                       ),
-                       column(width=2,align="center",
-                              h2("Right Wingers"),
-                              uiOutput("rightwings")
-                       ),
-                       column(width=2,align="center",
-                              h2("Defensemen"),
-                              uiOutput("defensemen")
-                       ),
-                       column(width=2,align="center",
-                              h2("Misc"),
-                             uiOutput("misc")
-                       ),
-                       column(width=2,align="center",
-                              h2("Goalies"),
-                              uiOutput("goalies")
-                       )
-                     )
-                   )
+    tabItem(
+      tabName = "teamstats",
+      style = "overflow-x: hidden;overflow-y: auto;",
+      column(
+        width = 9,
+        box(
+          id = "teamloadingbox",
+          width = 12,
+          title = h4("Create/Upload Team"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          fluidRow(
+            column(
+              width = 4,align="center",
+              radioGroupButtons("datasource",h1("Data Source"),choices = c("Local" = "loc"),status = "primary"),
+              uiOutput("teamloadchoices"),
+              uiOutput("fantasyteam")
             ),
-            column(width = 3,
-                   box(
-                     id = "leaguesettingsbox",
-                     width = 12,
-                     title = h4("League Settings"),
-                     solidHeader=T,
-                     status = "primary",
-                     collapsible = TRUE,
-                     collapsed = FALSE,
-                     column(width = 12, align ="center",
-                            fluidRow(
-                              radioGroupButtons("leaguetype",h1("League Type"),
-                                                choices = c("H2H Pts" = "h2hp",
-                                                            "H2H" = "h2h",
-                                                            "Roto" = "roto",
-                                                            "Pts Only" = "points"),
-                                                status = "primary")
-                            )
-                            
-                     ),
-                     uiOutput("leaguesettings")
-                   )
-            ),
-            column(width = 12,
-                   box(
-                     id = "teamstatsbox",
-                     width = 12,
-                     title = h4("Team Stats"),
-                     solidHeader=T,
-                     status = "primary",
-                     collapsible = TRUE,
-                     collapsed = FALSE,
-                     fluidRow(
-                       column(width = 3, align = "center",
-                              radioGroupButtons("teamStatType",
-                                                label = h2("Stat Type"),
-                                                choices = c("Total" = "tot",
-                                                            "Per Game" = "pg"),
-                                                selected = "tot",
-                                                status = "primary")
-                       ),
-                       column(width = 3, align = "center",
-                              selectInput("teamStatRange",
-                                          label = h2("Filter Period"),
-                                          choices = c("Last Season" = "ls",
-                                                      "Current Season" = "s",
-                                                      "Last 30 Days" = 30,
-                                                      "Last 14 Days" = 14,
-                                                      "Last 7 Days" = 7),
-                                          selected = "s")
-                       )
-                     ),
-                     reactableOutput("teamSkaterStats"),
-                     reactableOutput("teamGoalieStats")
-                   ),
-                   box(
-                     id = "testbox",
-                     width = 12,
-                     title = h1("Test"),
-                     solidHeader=T,
-                     status = "primary",
-                     collapsible = TRUE,
-                     collapsed = FALSE
-                   )
+            column(
+              width=6,align="center",offset = 1,
+              fluidRow(
+                h1("Team Composition")
+              ),
+              fluidRow(
+                column(width = 4,
+                       selectInput("numLW",h2("LW"),1:9,selected=4)
+                ),
+                column(width = 4, 
+                       selectInput("numC",h2("C"),1:9,selected=4)
+                ),
+                column(width = 4,
+                       selectInput("numRW",h2("RW"),1:9,selected=4)
+                )
+              ),
+              fluidRow(
+                column(width = 4,
+                       selectInput("numD",h2("D"),1:9,selected=4)
+                ),
+                column(width = 4,
+                       selectInput("numMisc",h2("Misc (Util, IR, IR+)"),1:9,selected=4)
+                ),
+                column(width = 4,
+                       selectInput("numG",h2("G"),1:9,selected=4)
+                )
+                  
+              )
             )
+          ),
+          fluidRow(
+            column(width=2,align="center",
+                  h2("Left Wingers"),
+                  uiOutput("leftwings")
+            ),
+            column(width=2,align="center",
+                  h2("Centers"),
+                  uiOutput("centers")
+            ),
+            column(width=2,align="center",
+                  h2("Right Wingers"),
+                  uiOutput("rightwings")
+            ),
+            column(width=2,align="center",
+                  h2("Defensemen"),
+                  uiOutput("defensemen")
+            ),
+            column(width=2,align="center",
+                  h2("Misc"),
+                 uiOutput("misc")
+            ),
+            column(width=2,align="center",
+                  h2("Goalies"),
+                  uiOutput("goalies")
+            )
+          )
+        )
+      ),
+      column(
+        width = 3,
+        box(
+          id = "leaguesettingsbox",
+          width = 12,
+          title = h4("League Settings"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE,
+          column(
+            width = 12, align ="center",
+            fluidRow(
+              radioGroupButtons(
+                "leaguetype",h1("League Type"),
+                choices = c("H2H Pts" = "h2hp",
+                            "H2H" = "h2h",
+                            "Roto" = "roto",
+                            "Pts Only" = "points"),
+                status = "primary"
+              )
+            )
+          ),
+          uiOutput("leaguesettings")
+        )
+      ),
+      column(
+        width = 12,
+        box(
+          id = "teamstatsbox",
+          width = 12,
+          title = h4("Team Stats"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE,
+          fluidRow(
+            column(
+              width = 3, 
+              align = "center",
+              radioGroupButtons(
+                "teamStatType",
+                label = h2("Stat Type"),
+                choices = c("Total" = "tot",
+                            "Per Game" = "pg"),
+                selected = "tot",
+                status = "primary"
+              )
+            ),
+            column(
+              width = 3, 
+              align = "center",
+              selectInput(
+                "teamStatRange",
+                label = h2("Filter Period"),
+                choices = c("Last Season" = "ls",
+                          "Current Season" = "s",
+                          "Last 30 Days" = 30,
+                          "Last 14 Days" = 14,
+                          "Last 7 Days" = 7),
+                selected = "s"
+              )
+            )
+          ),
+          reactableOutput("teamSkaterStats"),
+          reactableOutput("teamGoalieStats")
+        ),
+        box(
+          id = "leagueroster",
+          width = 12,
+          title = h4("League Roster"),
+          solidHeader=T,
+          status = "primary",
+          collapsible = TRUE,
+          collapsed = FALSE,
+          fluidRow(
+            column(
+              width = 3,
+              align = "center",
+              radioGroupButtons(
+                "rosteravail",
+                h2("Player Availability"),
+                choices = c("Free Agents Only" = "fa","All Players" = "all"),
+                status = "primary"
+              )
+            ),
+            column(
+              width = 3,
+              align = "center",
+              radioGroupButtons(
+                "rosterStatType",
+                label = h2("Stat Type"),
+                choices = c("Total" = "tot",
+                            "Per Game" = "pg"),
+                selected = "tot",
+                status = "primary"
+              )
+            ),
+            column(
+              width = 3,
+              align = "center",
+              selectInput(
+                "rosterStatRange",
+                label = h2("Filter Period"),
+                choices = c("Last Season" = "ls",
+                            "Current Season" = "s",
+                            "Last 30 Days" = 30,
+                            "Last 14 Days" = 14,
+                            "Last 7 Days" = 7),
+                selected = "s"
+              )
+            )
+          ),
+          reactableOutput("rosterSkaterStats"),
+          reactableOutput("rosterGoalieStats")
+        )
+      )
     )
   ),
   div(style = "width: 100%; height: 90vh")
@@ -422,16 +509,17 @@ body <- dashboardBody(
 ## Create Page =================================
 shinyUI(dashboardPage(
   skin = "blue",
-  dashboardHeader(title = tagList(h5(class = "logo-lg","FHA")),
-                  titleWidth =  "15%",
-                  tags$li(
-                    class = "dropdown",
-                    fluidRow(
-                      actionButton("loginopen",strong("Login")),
-                      actionButton("createacc",strong("Create Account"))
-                    )
-                  ),
-                  userOutput("user")),
+  dashboardHeader(
+    title = tagList(h5(class = "logo-lg","FHA")),
+    titleWidth =  "15%",
+    tags$li(
+      class = "dropdown",
+      fluidRow(
+        actionButton("loginopen",strong("Login")),
+        actionButton("createacc",strong("Create Account"))
+      )
+    ),
+    userOutput("user")),
   sidebar,
   body
 ))

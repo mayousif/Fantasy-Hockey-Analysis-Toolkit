@@ -33,7 +33,7 @@ shinyServer(function(input, output, session) {
   hideElement("playerRankType")
   hideElement("playerRankGPFilter")
   hideElement("playerRankPositionFilter")
-
+  shinyjs::hide("leagueroster")
 
   ## Player Metrics - Loading =================================
   observeEvent(input$playerInput, ignoreInit = T,priority = 10,{
@@ -1104,20 +1104,24 @@ shinyServer(function(input, output, session) {
       # Replace player names in other dataframes with names from yahoo league roster
       tempYahooNames = substr(leaguerosters$player_name_full,1,nchar(leaguerosters$player_name_full)-6)
       tempAFG = allFantasyGoalies$Name
-      tempAFGindex = which(!grepl("\\(",tempAFG))
-      for (i in tempAFGindex) {
+      for (i in 1:length(tempAFG)) {
         name = tempAFG[i]
-        if (name %in% tempYahooNames) {
+        if (grepl("\\(",name)) {
+          name = substr(name,1,nchar(name)-6)
+        }
+        if (name %in% tempYahooNames & length(leaguerosters$player_name_full[tempYahooNames== name])==1) {
+          print(name)
           allFantasyGoalies$Name[i] <<- leaguerosters$player_name_full[tempYahooNames == name]
-          
         }
       }
       
       tempAFS = allFantasySkaters$Name
-      tempAFSindex = which(!grepl("\\(",tempAFS))
-      for (i in tempAFSindex) {
+      for (i in 1:length(tempAFS)) {
         name = tempAFS[i]
-        if (name %in% tempYahooNames) {
+        if (grepl("\\(",name)) {
+          name = substr(name,1,nchar(name)-6)
+        }
+        if (name %in% tempYahooNames& length(leaguerosters$player_name_full[tempYahooNames== name])==1) {
           allFantasySkaters$Name[i] <<- leaguerosters$player_name_full[tempYahooNames == name]
           
         }
@@ -1613,9 +1617,10 @@ shinyServer(function(input, output, session) {
   
   
   ## Fantasy Team - Team Stats Box ===============================
-  observeEvent(c(teamGLOB_r$df,input$GFP,input$AFP,input$PFP,
-                 input$PPPFP,input$SHPFP,input$SOGFP,input$HITFP,input$BLKFP,
-                 input$GSFP,input$WFP,input$GAFP,input$SVFP,input$SHOFP,input$teamStatRange,
+  observeEvent(c(teamGLOB_r$df,input$GFP,input$AFP,input$PFP,input$`+/-FP`,
+                 input$PPGFP,input$PPAFP,input$PPPFP,input$SHGFP,input$SHAFP,input$SHPFP,
+                 input$SOGFP,input$HITFP,input$BLKFP,input$GWGFP,input$PIMFP,input$FOWFP,input$FOLFP,
+                 input$GSFP,input$WFP,input$LFP,input$GAFP,input$SVFP,input$SHOFP,input$teamStatRange,
                  input$teamStatType),ignoreInit=T,{
     
     # Get currently chosen fantasy team
@@ -1675,9 +1680,24 @@ shinyServer(function(input, output, session) {
             lineData[1,"Line"] = ordinal(playerlines$Line[playerlines$Player == team$Name[i]])
             lineData[1,"PP"] = ordinal(playerlines$PP[playerlines$Player == team$Name[i]])
             
+          } else if (leaguerosters$player_status[leaguerosters$player_name_full== team$Name[i]] %in% c("IR","IR-LT","O","DTD")) {
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Injured</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Injured</i></b>"
+            lineData[1,"Line"] = "<i>NA</i>"
+            lineData[1,"PP"] = "<i>NA</i>"
+          } else if (leaguerosters$player_status[leaguerosters$player_name_full== team$Name[i]]  %in% "SUSP") {
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Suspended</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Suspended</i></b>"
+            lineData[1,"Line"] = "<i>NA</i>"
+            lineData[1,"PP"] = "<i>NA</i>"
+          } else if (leaguerosters$player_status[leaguerosters$player_name_full== team$Name[i]]  %in% "NA") {
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Not Rostered</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Not Rostered</i></b>"
+            lineData[1,"Line"] = "<i>NA</i>"
+            lineData[1,"PP"] = "<i>NA</i>"
           } else {
-            lineData[1,"Linemate 1"] = "<i>NA</i>"
-            lineData[1,"Linemate 2"] = "<i>NA</i>"
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Unknown</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Unknown</i></b>"
             lineData[1,"Line"] = "<i>NA</i>"
             lineData[1,"PP"] = "<i>NA</i>"
           }
@@ -1959,6 +1979,380 @@ shinyServer(function(input, output, session) {
   
 
 
+  ## Fantasy Team - League Roster Stats Box ===============================
+  
+  # Show box if Yahoo Fantasy League is chosen
+  observeEvent(input$yahooleague, priority = 1,ignoreInit = T,
+    withProgress(value = 0.5,message = "Loading league roster...",{
+      if (input$yahooleague != "") {
+        shinyjs::show("leagueroster")
+        
+        roster = leaguerosters[leaguerosters$player_status != "NA" | is.na(leaguerosters$player_status),
+                               c("player_name_full","player_primary_position")]
+        colnames(roster) = c('Name','Position')
+        
+        # get list of players not found in yahoo league data
+        allFantasySkaters$Name[!allFantasySkaters$Name %in% leaguerosters$player_name_full]
+        
+        roster = left_join(roster,allFantasySkaters,by = "Name")
+        roster[roster$Position=='G',] = left_join(roster[roster$Position=='G',-3],allFantasyGoalies,by = "Name")
+        roster = roster[!is.na(roster$ID),]
+        
+        
+        rosterSkaterData = as.data.frame(matrix(ncol=27,nrow=0))
+        rosterGoalieData = as.data.frame(matrix(ncol=10,nrow=0))
+        if (nrow(roster)>0){
+          for (i in 1:nrow(roster)) {
+            if (roster$Position[i] != "G") {
+  
+              # Read player data if it exists, read dummy file if not
+              playerID = roster$ID[i]
+              if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))) {
+                playerData = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))
+              } else {
+                playerData = read.csv(paste0(currDir,"/Data/Players/dummyfileskater.csv"))[-1,]
+              }
+  
+              if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
+                playerDataLS = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))
+              } else {
+                playerDataLS = read.csv(paste0(currDir,"/Data/Players/dummyfileskater.csv"))[-1,]
+              }
+  
+              # Format dates
+              playerData$Date = as.Date(playerData$Date)
+              playerDataLS$Date = as.Date(playerDataLS$Date)
+  
+              # Filter based on chosen date range if needed
+              if (input$rosterStatRange == "ls") {
+                playerData = playerDataLS
+              } else if (input$rosterStatRange != "s") {
+                playerData = playerData[playerData$Date > today()-as.numeric(input$rosterStatRange),]
+              }
+  
+              # Get stat totals
+              playerData = playerData %>%
+                summarise(GP = nrow(playerData),
+                          Goals = sum(Scoring_G),
+                          Assists = sum(Scoring_A),
+                          Points = sum(Scoring_PTS),
+                          `+/-` = sum(`X...`),
+                          PPG = sum(Goals_PP),
+                          PPA = sum(Assists_PP),
+                          PPP = sum(Goals_PP)+sum(Assists_PP),
+                          SHG = sum(Goals_SH),
+                          SHA = sum(Goals_SH),
+                          SHP = sum(Goals_SH)+sum(Assists_SH),
+                          GWG = sum(Goals_GW),
+                          Shots = sum(S),
+                          Hits = sum(HIT),
+                          Blocks = sum(BLK),
+                          FOW = sum(FOW),
+                          FOL = sum(FOL),
+                          PIM = sum(PIM))
+  
+              # Append line #/pp line #
+              lineData = data.frame()
+              if (roster$Name[i] %in% playerlines$Player) {
+                lineData[1,"Linemate 1"] = substr(playerlines$Linemate1[playerlines$Player == roster$Name[i]],1,
+                                                  nchar(playerlines$Linemate1[playerlines$Player == roster$Name[i]])-6)[1]
+                lineData[1,"Linemate 2"] = substr(playerlines$Linemate2[playerlines$Player == roster$Name[i]],1,
+                                                  nchar(playerlines$Linemate2[playerlines$Player == roster$Name[i]])-6)[1]
+                lineData[1,"Line"] = ordinal(playerlines$Line[playerlines$Player == roster$Name[i]])[1]
+                lineData[1,"PP"] = ordinal(playerlines$PP[playerlines$Player == roster$Name[i]])[1]
+                
+  
+              } else if (leaguerosters$player_status[leaguerosters$player_name_full== roster$Name[i]] %in% c("IR","IR-LT","O","DTD")) {
+                lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Injured</i></b>"
+                lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Injured</i></b>"
+                lineData[1,"Line"] = "<i>NA</i>"
+                lineData[1,"PP"] = "<i>NA</i>"
+              } else if (leaguerosters$player_status[leaguerosters$player_name_full== roster$Name[i]] %in% "SUSP") {
+                lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Suspended</i></b>"
+                lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Suspended</i></b>"
+                lineData[1,"Line"] = "<i>NA</i>"
+                lineData[1,"PP"] = "<i>NA</i>"
+              } else if (leaguerosters$player_status[leaguerosters$player_name_full== roster$Name[i]] %in% "NA") {
+                lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Not Rostered</i></b>"
+                lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Not Rostered</i></b>"
+                lineData[1,"Line"] = "<i>NA</i>"
+                lineData[1,"PP"] = "<i>NA</i>"
+              } else {
+                lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Unknown</i></b>"
+                lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Unknown</i></b>"
+                lineData[1,"Line"] = "<i>NA</i>"
+                lineData[1,"PP"] = "<i>NA</i>"
+              }
+  
+              # Gets games remaining this week and next week
+              if (grepl('\\(',roster$Name[i])) {
+                GRCW = gamesCurrWeek$count[gamesCurrWeek$teamabv==substr(roster$Name[i], nchar(roster$Name[i])-3, nchar(roster$Name[i])-1)]
+                GRNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(roster$Name[i], nchar(roster$Name[i])-3, nchar(roster$Name[i])-1)]
+              } else {
+                GRCW = NA
+                GRNW = NA
+              }
+  
+              # Append/merge all info
+              playerData = cbind(Pos. = roster$Position[i],
+                                 Name = roster$Name[i],
+                                 lineData,
+                                 GRCW = GRCW,
+                                 GRNW = GRNW,
+                                 `FT PTS` = NA,
+                                 playerData)
+  
+              # Append player data to roster table
+              colnames(rosterSkaterData) = colnames(playerData)
+              rosterSkaterData=rbind(rosterSkaterData,playerData)
+  
+            } else {
+  
+              # Read player data if it exists, read dummy file if not
+              playerID = roster$ID[i]
+              if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))) {
+                playerData = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason,".csv"))
+              } else {
+                playerData = read.csv(paste0(currDir,"/Data/Players/dummyfilegoalie.csv"))[-1,]
+  
+              }
+              if (file.exists(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))) {
+                playerDataLS = read.csv(paste0(currDir,"/Data/Players/",playerID,"/",currentSeason-1,".csv"))
+              } else {
+                playerDataLS = read.csv(paste0(currDir,"/Data/Players/dummyfilegoalie.csv"))[-1,]
+              }
+  
+              # Format dates
+              playerData$Date = as.Date(playerData$Date)
+              playerDataLS$Date = as.Date(playerDataLS$Date)
+  
+              # Filter based on chosen date range if needed
+              if (input$rosterStatRange == "ls") {
+                playerData = playerDataLS
+              } else if (input$rosterStatRange != "s") {
+                playerData = playerData[playerData$Date >= today()-as.numeric(input$rosterStatRange),]
+              }
+  
+              # Gets games remaining this week and next week
+              if (grepl('\\(',roster$Name[i])) {
+                GRCW = gamesCurrWeek$count[gamesCurrWeek$teamabv==substr(roster$Name[i], nchar(roster$Name[i])-3, nchar(roster$Name[i])-1)]
+                GRNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(roster$Name[i], nchar(roster$Name[i])-3, nchar(roster$Name[i])-1)]
+              } else {
+                GRCW = NA
+                GRNW = NA
+              }
+  
+              # Get stat totals
+              playerData = playerData %>%
+                summarize(GP = max(G),
+                          Wins = sum(playerData$DEC=='W'),
+                          Shutouts = sum(Goalie.Stats_SO),
+                          Saves = sum(Goalie.Stats_SV),
+                          GA = sum(Goalie.Stats_GA))
+              playerData = cbind(Pos. = roster$Position[i],
+                                 Name = roster$Name[i],
+                                 GRCW = GRCW,
+                                 GRNW = GRNW,
+                                 `FT PTS` = NA,
+                                 playerData)
+              
+              # Append player data to roster table
+              colnames(rosterGoalieData) = colnames(playerData)
+              rosterGoalieData=rbind(rosterGoalieData,playerData)
+  
+            }
+  
+          }
+        }
+  
+        # Replace NA/INF with 0
+        rosterSkaterData[,-c(1:8)][apply(rosterSkaterData[,-c(1:8)],c(1,2),is.na)] = 0
+        rosterSkaterData[,-c(1:8)][apply(rosterSkaterData[,-c(1:8)],c(1,2),is.infinite)] = 0
+        rosterGoalieData[,-c(1:4)][apply(rosterGoalieData[,-c(1:4)],c(1,2),is.na)] = 0
+        rosterGoalieData[,-c(1:4)][apply(rosterGoalieData[,-c(1:4)],c(1,2),is.infinite)] = 0
+        
+        rosterSkaterData <<- rosterSkaterData
+        rosterGoalieData <<- rosterGoalieData
+      }
+    
+  }))
+  
+  # Calc fantasy points and display
+  observeEvent(c(input$yahooleague,input$GFP,input$AFP,input$PFP,input$`+/-FP`,
+                 input$PPGFP,input$PPAFP,input$PPPFP,input$SHGFP,input$SHAFP,input$SHPFP,
+                 input$SOGFP,input$HITFP,input$BLKFP,input$GWGFP,input$PIMFP,input$FOWFP,input$FOLFP,
+                 input$GSFP,input$WFP,input$LFP,input$GAFP,input$SVFP,input$SHOFP,
+                 input$rosterStatRange), priority = 10,ignoreInit = T,{
+    
+    
+    if (!is.null(input$yahooleague) & exists("rosterSkaterData")) {
+      
+      
+      # Skater reactable
+      if (nrow(rosterSkaterData)>0) {
+        
+        # Calculate fantasy points
+        rosterSkaterData$`FT PTS` = 
+          input$GFP*rosterSkaterData$Goals + input$AFP*rosterSkaterData$Assists + input$PFP*rosterSkaterData$Points + 
+          input$PPGFP*rosterSkaterData$PPG + input$PPAFP*rosterSkaterData$PPA + input$PPPFP*rosterSkaterData$PPP + 
+          input$SHGFP*rosterSkaterData$SHG + input$SHAFP*rosterSkaterData$SHA + input$SHPFP*rosterSkaterData$SHP +
+          input$SOGFP*rosterSkaterData$Shots + input$BLKFP*rosterSkaterData$Blocks + input$HITFP*rosterSkaterData$Hits +
+          input$FOWFP*rosterSkaterData$FOW + input$FOLFP*rosterSkaterData$FOL + input$`+/-FP`*rosterSkaterData$`+/-` +
+          input$GWGFP*rosterSkaterData$GWG + input$PIMFP*rosterSkaterData$PIM
+        
+        # Calc per game stats if needed
+        if (input$rosterStatType =="pg") {
+          rosterSkaterData[,-c(1:8,10)] = round(rosterSkaterData[,-c(1:8,10)]/rosterSkaterData$GP,2)
+        }
+        
+        
+        # Convert names to actionLinks
+        rosterSkaterData = setDT(rosterSkaterData)
+        rosterSkaterData$Row = 1:nrow(rosterSkaterData)
+        rosterSkaterData[, inputId := rosterSkaterData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
+        
+        # Reactable styling
+        skaterTableStyle <- function(value, index, name) {
+          normalized <- (value - min(rosterSkaterData[[name]], na.rm = T)) /
+            (max(rosterSkaterData[[name]], na.rm = T) - min(rosterSkaterData[[name]], na.rm = T))
+          color <- GrnRedPalette(normalized)
+          list(background = color,fontWeight = 600,fontSize=14,minWidth = 75,maxWidth = 75)
+        }
+        
+        # Skater table output
+        output$rosterSkaterStats <- renderReactable({
+          reactable(
+            rosterSkaterData,
+            defaultColDef = colDef(
+              align = "center",
+              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+              style = skaterTableStyle,
+              html = T,
+              vAlign ="center"
+            ),
+            columns = list(
+              `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 100,maxWidth = 100),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 100,maxWidth = 100),
+                              sticky = "left",vAlign ="center"),
+              Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 200,maxWidth = 200),
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 200,maxWidth = 200),
+                            sticky = "left",vAlign ="center"),
+              `Linemate 1` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 150,maxWidth = 150),
+                                    headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 150,maxWidth = 150),
+                                    vAlign ="center"),
+              `Linemate 2` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 150,maxWidth = 150),
+                                    headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 150,maxWidth = 150),
+                                    vAlign ="center"),
+              `Line` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
+                              vAlign ="center"),
+              PP = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
+                          vAlign ="center",header = with_tooltip("PP", "Power Play Line")),
+              GRCW = colDef(style = skaterTableStyle,
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                            vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
+              GRNW = colDef(style = skaterTableStyle,
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                            vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
+              Row = colDef(show=F)
+            ),
+            wrap = FALSE,
+            outlined = TRUE,
+            borderless = TRUE,
+            highlight = TRUE,
+            striped = TRUE,
+            defaultPageSize = 20,
+            fullWidth = TRUE,
+            theme = reactableTheme(
+              style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                           ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                           ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+              backgroundColor = "#f6f8fc"
+            )
+          )
+        })
+        
+        
+      }
+      # Goalie reactable
+      if (nrow(rosterGoalieData)>0) {
+        
+        # Calculate fantasy points
+        rosterGoalieData$`FT PTS` = input$GSFP*rosterGoalieData$GP + input$WFP*rosterGoalieData$Wins +
+          input$SVFP*rosterGoalieData$Saves + input$SHOFP*rosterGoalieData$Shutouts + input$GAFP*rosterGoalieData$GA
+        
+        # Calc per game stats if needed
+        if (input$rosterStatType =="pg") {
+          rosterGoalieData[,-c(1:4,6)] = round(rosterGoalieData[,-c(1:4,6)]/rosterGoalieData$GP,2)
+        }
+        
+        rosterGoalieData = setDT(rosterGoalieData)
+        rosterGoalieData$Row = (1+nrow(rosterSkaterData)):(nrow(rosterSkaterData)+nrow(rosterGoalieData))
+        rosterGoalieData[, inputId := rosterGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
+        
+        
+        # Reactable styling
+        goalieTableStyle <- function(value, index, name) {
+          normalized <- (value - min(rosterGoalieData[[name]], na.rm = T)) /
+            (max(rosterGoalieData[[name]], na.rm = T) - min(rosterGoalieData[[name]], na.rm = T))
+          color <- GrnRedPalette(normalized)
+          list(background = color,fontWeight = 600,fontSize=14,minWidth = 75, maxWidth = 75)
+        }
+        
+        # Goalie table output
+        output$rosterGoalieStats <- renderReactable({
+          reactable(
+            rosterGoalieData,
+            defaultColDef = colDef(
+              align = "center",
+              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75, maxWidth=75),
+              style = goalieTableStyle,
+              maxWidth = 1000,
+              html = T,
+              vAlign ="center"
+            ),
+            columns = list(
+              `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
+                              sticky = "left",vAlign ="center"),
+              Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=200,maxWidth=200),
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth=200,maxWidth=200),
+                            sticky = "left",vAlign ="center"),
+              GRCW = colDef(style = goalieTableStyle,
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                            vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
+              GRNW = colDef(style = goalieTableStyle,
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                            vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
+              Shutouts = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                                headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
+                                vAlign ="center"),
+              Row = colDef(show=F)
+              
+            ),
+            outlined = TRUE,
+            borderless = TRUE,
+            highlight = TRUE,
+            defaultPageSize = 10,
+            striped= TRUE,
+            fullWidth = TRUE,
+            wrap = FALSE,
+            resizable = TRUE,
+            theme = reactableTheme(
+              style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                           ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                           ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+              backgroundColor = "#f6f8fc"
+            )
+          )
+        })
+        
+      }
+    }
+  })
+  
+  
   ## Account creation/login ===============================
   # Create userbase file if one does not exist, otherwise read in user base
   if (!file.exists(paste0(currDir,"/Data/Users/user_base.rds"))) {
