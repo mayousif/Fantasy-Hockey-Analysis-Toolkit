@@ -12,3 +12,4 @@ getLeagueData.R
 Fantasy-Hockey-Analyzer.Rproj
 *.RDS
 runYahooDataPull.bat
+run.R

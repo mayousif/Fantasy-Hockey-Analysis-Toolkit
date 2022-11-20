@@ -3,12 +3,11 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import os
-import re
 import fiscalyear
-import random
 from lxml.html import fromstring
 from itertools import cycle
 from io import StringIO
+from datetime import datetime, timedelta
 import time
 import unicodedata
 fiscalyear.START_MONTH = 10
@@ -229,14 +228,30 @@ def getPlayerNames(seasons):
     playerNamesDF = playerNamesDF.replace('Calvin Petersen', 'Cal Petersen',regex=True)
     playerNamesDF = playerNamesDF.replace('Anthony Deangelo', 'Tony Deangelo',regex=True)
     playerNamesDF = playerNamesDF.replace('Joshua Norris', 'Josh Norris',regex=True)
+    playerNamesDF = playerNamesDF.replace('Michael Anderson', 'Mikey Anderson',regex=True)
+    playerNamesDF = playerNamesDF.replace('William Borgen', 'Will Borgen',regex=True)
+    playerNamesDF = playerNamesDF.replace('Mathew Dumba', 'Matt Dumba',regex=True)
+    playerNamesDF = playerNamesDF.replace('Callan Foote', 'Cal Foote',regex=True)
+    playerNamesDF = playerNamesDF.replace('Zachary Jones', 'Zac Jones',regex=True)
+    playerNamesDF = playerNamesDF.replace('Axel Jonsson Fjallby', 'Axel Jonsson-Fjallby',regex=True)
+    playerNamesDF = playerNamesDF.replace('Zachary Jones', 'Zac Jones',regex=True)
+    playerNamesDF = playerNamesDF.replace('Jonathon Merrill', 'Jon Merrill',regex=True)
+    playerNamesDF = playerNamesDF.replace('Matthew Nieto', 'Matt Nieto',regex=True)
+    playerNamesDF = playerNamesDF.replace('Nick Paul', 'Nicholas Paul',regex=True)
+    playerNamesDF = playerNamesDF.replace('Nicklaus Perbix', 'Nick Perbix',regex=True)
+    playerNamesDF = playerNamesDF.replace('John-Jason Peterka ', 'Jj Peterka ',regex=True)
+    playerNamesDF = playerNamesDF.replace('Samuel Poulin', 'Sam Poulin',regex=True)
+    playerNamesDF = playerNamesDF.replace('Alexander Wennberg', 'Alex Wennberg',regex=True)
+    playerNamesDF = playerNamesDF.replace('Yegor Zamula', 'Egor Zamula',regex=True)
     
     # Save to file
     playerNamesDF.to_csv("Data/PlayerNames.csv",index=False)
 
 
 
-
-def mergeSeasonStats(seasons):
+# Merge stats with optional paramater to get last 7,14, or 30 day stats
+# (optional time parameters are "7day","14day",or "30day")
+def mergeSeasonStats(seasons,time = ""):
     # Get list of all playerIDs in data folder
     playerIDs = next(os.walk("Data/Players/"))[1]
     
@@ -260,7 +275,17 @@ def mergeSeasonStats(seasons):
                 # Check if player played this year
                 if os.path.exists(datadir):
                     playerdata = pd.read_csv("Data/Players/"+player+"/"+str(season)+".csv")
-                    
+                    playerdata['Date'] = pd.to_datetime(playerdata['Date'])
+                    if time == "7day":
+                        startDate = pd.Timestamp.now() - timedelta(days=7)
+                        playerdata = playerdata[playerdata['Date']>=startDate]
+                    elif time == "14day":
+                        startDate = pd.Timestamp.now() - timedelta(days=14)
+                        playerdata = playerdata[playerdata['Date']>=startDate]
+                    elif time == "30day":
+                        startDate = pd.Timestamp.now() - timedelta(days=30)
+                        playerdata = playerdata[playerdata['Date']>=startDate]
+                        
                     # Get season summary for this player
                     summarydata = {
                         "ID": player,
@@ -298,6 +323,17 @@ def mergeSeasonStats(seasons):
                 # Check if player played this year
                 if os.path.exists(datadir):
                     playerdata = pd.read_csv("Data/Players/"+player+"/"+str(season)+".csv")
+                    playerdata['Date'] = pd.to_datetime(playerdata['Date'])
+                    if time == "7day":
+                        startDate = pd.Timestamp.now() - timedelta(days=7)
+                        playerdata = playerdata[playerdata['Date']>startDate]
+                    elif time == "14day":
+                        startDate = pd.Timestamp.now() - timedelta(days=14)
+                        playerdata = playerdata[playerdata['Date']>=startDate]
+                    elif time == "30day":
+                        startDate = pd.Timestamp.now() - timedelta(days=30)
+                        playerdata = playerdata[playerdata['Date']>=startDate]
+                    
                     
                     # Get season summary for this player
                     summarydata = {
@@ -315,19 +351,27 @@ def mergeSeasonStats(seasons):
                     summarydata = pd.Series(summarydata).to_frame().T
                     mergedDataGoalies = mergedDataGoalies.append(summarydata)
             
-            
         # Save to csv
         os.makedirs("Data/allSkaters/", exist_ok=True)
         os.makedirs("Data/allGoalies/", exist_ok=True)
-        mergedDataSkaters.to_csv("Data/allSkaters/"+str(season)+".csv",index=False)
-        mergedDataGoalies.to_csv("Data/allGoalies/"+str(season)+".csv",index=False)
+        if time == "7day":
+            mergedDataSkaters.to_csv("Data/allSkaters/7day.csv",index=False)
+            mergedDataGoalies.to_csv("Data/allGoalies/7day.csv",index=False)
+        elif time == "14day":
+            mergedDataSkaters.to_csv("Data/allSkaters/14day.csv",index=False)
+            mergedDataGoalies.to_csv("Data/allGoalies/14day.csv",index=False)
+        elif time == "30day":
+            mergedDataSkaters.to_csv("Data/allSkaters/30day.csv",index=False)
+            mergedDataGoalies.to_csv("Data/allGoalies/30day.csv",index=False)  
+        else:
+            mergedDataSkaters.to_csv("Data/allSkaters/"+str(season)+".csv",index=False)
+            mergedDataGoalies.to_csv("Data/allGoalies/"+str(season)+".csv",index=False)
         
 def getPlayerLines():
-    print("Getting updated player lines")
     # Get URL for each team
     url = "https://www.dailyfaceoff.com/teams/"
-    agent = {"User-Agent":"Mozilla/5.0"}
-    page = requests.get(url,headers=agent)
+    headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36'}
+    page = requests.get(url,headers=headers)
     soup = BeautifulSoup(page.text, 'lxml')
     teams = soup.find_all('a',{"class": "team-logo-img"})
     teams = [i['href'] for i in teams]
@@ -338,30 +382,41 @@ def getPlayerLines():
     # Loop through each team
     allPlayerLines = pd.DataFrame()
     for team in teams:
+        print("Getting updated player lines for "+team)
+        time.sleep(4)
         teamname = team.split("/")[0].replace("-"," ").title()
         teamabv = teamnames['teamabv'].loc[teamnames['teamname']==teamname].iloc[0]
         urlteam = url+team 
-        page = requests.get(urlteam,headers=agent)
+        page = requests.get(urlteam,headers=headers)
         soup = BeautifulSoup(page.text, 'lxml')
         
         # Get forward lines
         for i in [1,2,3,4]:
             if (soup.find_all('td',id='LW'+str(i))!=[]):
                 LW = soup.find_all('td',id='LW'+str(i))[0]
-                LW = LW.find('span',{'class':'player-name'}).text.title()
-                LW = LW + " ("+teamabv+")"
+                if not LW.find('span',{'class':'player-name'}) is None:
+                    LW = LW.find('span',{'class':'player-name'}).text.title()
+                    LW = LW + " ("+teamabv+")"
+                else:
+                    LW = ""
             else:
                 LW = ""
             if (soup.find_all('td',id='RW'+str(i))!=[]):
                 RW = soup.find_all('td',id='RW'+str(i))[0]
-                RW = RW.find('span',{'class':'player-name'}).text.title()
-                RW = RW + " ("+teamabv+")"
+                if not RW.find('span',{'class':'player-name'}) is None:
+                    RW = RW.find('span',{'class':'player-name'}).text.title()
+                    RW = RW + " ("+teamabv+")"
+                else:
+                    RW = ""
             else:
                 RW = ""
             if (soup.find_all('td',id='C'+str(i))!=[]):
                 C = soup.find_all('td',id='C'+str(i))[0]
-                C = C.find('span',{'class':'player-name'}).text.title()
-                C = C + " ("+teamabv+")"
+                if not C.find('span',{'class':'player-name'}) is None:
+                    C = C.find('span',{'class':'player-name'}).text.title()
+                    C = C + " ("+teamabv+")"
+                else:
+                    C = ""
             else:
                 C = ""
         
@@ -380,14 +435,20 @@ def getPlayerLines():
         for i in [1,2,3]:
             if (soup.find_all('td',id='LD'+str(i))!=[]):
                 LD = soup.find_all('td',id='LD'+str(i))[0]
-                LD = LD.find('span',{'class':'player-name'}).text.title()
-                LD = LD + " ("+teamabv+")"
+                if not LD.find('span',{'class':'player-name'}) is None:
+                    LD = LD.find('span',{'class':'player-name'}).text.title()
+                    LD = LD + " ("+teamabv+")"
+                else:
+                    LD = ""
             else:
                 LD = ""
             if (soup.find_all('td',id='RD'+str(i))!=[]):
                 RD = soup.find_all('td',id='RD'+str(i))[0]
-                RD = RD.find('span',{'class':'player-name'}).text.title()
-                RD = RD + " ("+teamabv+")"
+                if not RD.find('span',{'class':'player-name'}) is None:
+                    RD = RD.find('span',{'class':'player-name'}).text.title()
+                    RD = RD + " ("+teamabv+")"
+                else:
+                    RD = ""
             else:
                 RD = ""
             
@@ -430,6 +491,13 @@ def getPlayerLines():
     allPlayerLines = allPlayerLines.replace('Tim Stutzle', 'Tim Stuetzle',regex=True)
     allPlayerLines = allPlayerLines.replace('Matthew Beniers', 'Matty Beniers',regex=True)
     allPlayerLines = allPlayerLines.replace('Mitch Marner', 'Mitchell Marner',regex=True)
+    allPlayerLines = allPlayerLines.replace('William Borgen', 'Will Borgen',regex=True)
+    allPlayerLines = allPlayerLines.replace('Mathew Dumba', '"Matt Dumba',regex=True)
+    allPlayerLines = allPlayerLines.replace('Matthew Nieto', 'Matt Nieto',regex=True)
+    allPlayerLines = allPlayerLines.replace('Nick Paul', 'Nicholas Paul',regex=True)
+    allPlayerLines = allPlayerLines.replace('John Jason Peterka ', 'Jj Peterka ',regex=True)
+    allPlayerLines = allPlayerLines.replace('Alexander Wennberg', 'Alex Wennberg',regex=True)
+    allPlayerLines = allPlayerLines.replace('Yegor Zamula', 'Egor Zamula',regex=True)
     
     # Write to csv
     allPlayerLines.to_csv("Data/PlayerLines.csv",index=False)
@@ -441,8 +509,8 @@ def pullSeasonSchedule(currentSeason):
     
     # Season schedule
     seasonschedule = pd.read_html(url)[0]
-    seasonschedule['Visitor'] = seasonschedule['Visitor'].str.replace(".","")
-    seasonschedule['Home'] = seasonschedule['Home'].str.replace(".","")
+    seasonschedule['Visitor'] = seasonschedule['Visitor'].str.replace(".","",regex=False)
+    seasonschedule['Home'] = seasonschedule['Home'].str.replace(".","",regex=False)
     
     # Append team abv and sort by date
     teamnames = pd.read_csv("Data/teamNames.csv")
@@ -465,7 +533,10 @@ def pullSeasonSchedule(currentSeason):
 # Execute functions
 pullPlayerStats(currentSeason,"skaters")
 pullPlayerStats(currentSeason,"goalies")
+mergeSeasonStats(currentSeason)
+mergeSeasonStats(currentSeason,time="7day")
+mergeSeasonStats(currentSeason,time="14day")
+mergeSeasonStats(currentSeason,time="30day")
 getPlayerNames(list(range(2010,currentSeason+1)))
 getPlayerLines()
-mergeSeasonStats(currentSeason)
 pullSeasonSchedule(currentSeason)

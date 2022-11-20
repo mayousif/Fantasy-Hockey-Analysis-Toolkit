@@ -27,13 +27,13 @@ shinyServer(function(input, output, session) {
                        choices = playernames$Name,
                        selected = character(0), 
                        server = T)
-  
+
   hideElement("seasonStatsType")
   hideElement("playerRankSeason")
   hideElement("playerRankType")
   hideElement("playerRankGPFilter")
   hideElement("playerRankPositionFilter")
-
+  shinyjs::hide("leaguerosterbox")
 
   ## Player Metrics - Loading =================================
   observeEvent(input$playerInput, ignoreInit = T,priority = 10,{
@@ -473,7 +473,7 @@ shinyServer(function(input, output, session) {
     
     # Load and filter data
     if (playernames$Position[playernames$ID==playerID] != "G") {
-      allPlayerData <<- read.csv(paste0("Data/allSkaters/",input$playerRankSeason,".csv"))
+      allPlayerData <<- read.csv(paste0(currDir,"/Data/allSkaters/",input$playerRankSeason,".csv"))
       allPlayerData <<- left_join(allPlayerData,playernames,"ID")
       
       # Filter positions if needed
@@ -1104,24 +1104,34 @@ shinyServer(function(input, output, session) {
       # Replace player names in other dataframes with names from yahoo league roster
       tempYahooNames = substr(leaguerosters$player_name_full,1,nchar(leaguerosters$player_name_full)-6)
       tempAFG = allFantasyGoalies$Name
-      tempAFGindex = which(!grepl("\\(",tempAFG))
-      for (i in tempAFGindex) {
+      for (i in 1:length(tempAFG)) {
         name = tempAFG[i]
-        if (name %in% tempYahooNames) {
+        if (grepl("\\(",name)) {
+          name = substr(name,1,nchar(name)-6)
+        }
+        if (name %in% tempYahooNames & length(leaguerosters$player_name_full[tempYahooNames== name])==1) {
           allFantasyGoalies$Name[i] <<- leaguerosters$player_name_full[tempYahooNames == name]
-          
         }
       }
       
       tempAFS = allFantasySkaters$Name
-      tempAFSindex = which(!grepl("\\(",tempAFS))
-      for (i in tempAFSindex) {
+      for (i in 1:length(tempAFS)) {
         name = tempAFS[i]
-        if (name %in% tempYahooNames) {
+        if (grepl("\\(",name)) {
+          name = substr(name,1,nchar(name)-6)
+        }
+        if (name %in% tempYahooNames& length(leaguerosters$player_name_full[tempYahooNames== name])==1) {
           allFantasySkaters$Name[i] <<- leaguerosters$player_name_full[tempYahooNames == name]
           
         }
       }
+      
+      # Update sidebar player selector
+      updateSelectizeInput(session, 
+                           'playerInput', 
+                           choices = playernames$Name,
+                           selected = character(0), 
+                           server = T)
       
       
       # Update league type
@@ -1150,7 +1160,7 @@ shinyServer(function(input, output, session) {
   }))
   
   # Update league settings based on league type
-  observeEvent(input$yahooleague,ignoreInit = T,priority = 1, delay(250,{
+  observeEvent(input$yahooleague,ignoreInit = T,priority = 1, delay(2500,{
     if (input$yahooleague != "") {
       if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "headpoint") {
         # Pull league settings from yahoo
@@ -1159,13 +1169,8 @@ shinyServer(function(input, output, session) {
         statmod = leaguesettings$stat_modifiers[[1]]
         
         # Update inputs
-        statinputs = c("GFP","AFP","PFP","+/-FP","PPAFP","PPGFP","PPPFP","SHGFP","SHAFP","SHPFP", "GWGFP",
-                       "SFP","HITFP","BLKFP","FOWFP","FOLFP","GSFP","WFP","LFP","GAFP","SAFP","SVFP","SHOFP")
-        
-        # Box must be open to update settings
-        if (!input$leaguesettingsbox$collapsed) {
-          updateBox("leaguesettingsbox", action = "toggle")
-        }
+        statinputs = c("GFP","AFP","PFP","+/-FP","PPAFP","PPGFP","PPPFP","SHGFP","SHAFP","SHPFP", "GWGFP","SOGFP",
+                       "HITFP","BLKFP","FOWFP","FOLFP","PIMFP","GSFP","WFP","LFP","GAFP","SAFP","SVFP","SHOFP")
         
         # Set all stat values to 0
         for (i in 1:length(statinputs)) {
@@ -1179,12 +1184,6 @@ shinyServer(function(input, output, session) {
           updateNumericInput(session,inputstr,value = as.numeric(statmod[i,2]))
         }
         
-        # Close box
-        if (!input$leaguesettingsbox$collapsed) {
-          updateBox("leaguesettingsbox", action = "toggle")
-        }
-        
-        
         
       } else if (leagues$league_scoring_type[leagues$league_id==input$yahooleague] == "head") {
         
@@ -1196,14 +1195,28 @@ shinyServer(function(input, output, session) {
     
     } else {
       # Update inputs
-      statinputs = c("GFP","AFP","PFP","+/-FP","PPAFP","PPGFP","PPPFP","SHGFP","SHAFP","SHPFP", "GWGFP",
-                     "SFP","HITFP","BLKFP","FOWFP","FOLFP","GSFP","WFP","LFP","GAFP","SAFP","SVFP","SHOFP")
+      statinputs = c("GFP","AFP","PFP","+/-FP","PPAFP","PPGFP","PPPFP","SHGFP","SHAFP","SHPFP", "GWGFP","SOGFP",
+                     "HITFP","BLKFP","FOWFP","FOLFP","PIMFP","GSFP","WFP","LFP","GAFP","SAFP","SVFP","SHOFP")
       # Set all stat values to 0
       for (i in 1:length(statinputs)) {
         updateNumericInput(session,statinputs[i],value = 0)
       }
     }
   }))
+  
+  observeEvent(input$yahooleague,ignoreInit =T,priority = 1, {
+    if (input$yahooleague != "") {
+      # Close box
+      if (!input$leaguesettingsbox$collapsed) {
+        updateBox("leaguesettingsbox", action = "toggle")
+      }
+    }
+  })
+  
+  
+  
+  
+  
   
   #Initialize tracking variables
   numC_UI <<- 0
@@ -1548,6 +1561,12 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session,"numMisc",selected =sum(teamGLOB$Position=="Misc"))
       updateSelectInput(session,"numG",selected =sum(teamGLOB$Position=="G"))
       
+      # Close box
+      if (!input$teamloadingbox$collapsed) {
+        updateBox("teamloadingbox", action = "toggle")
+      }
+      
+      
     }
     
   })
@@ -1613,17 +1632,18 @@ shinyServer(function(input, output, session) {
   
   
   ## Fantasy Team - Team Stats Box ===============================
-  observeEvent(c(teamGLOB_r$df,input$GFP,input$AFP,input$PFP,
-                 input$PPPFP,input$SHPFP,input$SOGFP,input$HITFP,input$BLKFP,
-                 input$GSFP,input$WFP,input$GAFP,input$SVFP,input$SHOFP,input$teamStatRange,
+  observeEvent(c(teamGLOB_r$df,input$GFP,input$AFP,input$PFP,input$`+/-FP`,
+                 input$PPGFP,input$PPAFP,input$PPPFP,input$SHGFP,input$SHAFP,input$SHPFP,
+                 input$SOGFP,input$HITFP,input$BLKFP,input$GWGFP,input$PIMFP,input$FOWFP,input$FOLFP,
+                 input$GSFP,input$WFP,input$LFP,input$GAFP,input$SVFP,input$SHOFP,input$teamStatRange,
                  input$teamStatType),ignoreInit=T,{
     
     # Get currently chosen fantasy team
     team = teamGLOB_r$df
     
     # Create data table
-    teamSkaterData = as.data.frame(matrix(ncol=19,nrow=0))
-    teamGoalieData = as.data.frame(matrix(ncol=10,nrow=0))
+    teamSkaterData = as.data.frame(matrix(ncol=21,nrow=0))
+    teamGoalieData = as.data.frame(matrix(ncol=11,nrow=0))
     if (nrow(team)>0){
       for (i in 1:nrow(team)) {
         if (team$Position[i] != "G") {
@@ -1675,9 +1695,24 @@ shinyServer(function(input, output, session) {
             lineData[1,"Line"] = ordinal(playerlines$Line[playerlines$Player == team$Name[i]])
             lineData[1,"PP"] = ordinal(playerlines$PP[playerlines$Player == team$Name[i]])
             
+          } else if (exists("leaguerosters") && leaguerosters$player_status[leaguerosters$player_name_full== team$Name[i]] %in% c("IR","IR-LT","O","DTD")) {
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Injured</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Injured</i></b>"
+            lineData[1,"Line"] = "<i>NA</i>"
+            lineData[1,"PP"] = "<i>NA</i>"
+          } else if (exists("leaguerosters") &&leaguerosters$player_status[leaguerosters$player_name_full== team$Name[i]]  %in% "SUSP") {
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Suspended</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Suspended</i></b>"
+            lineData[1,"Line"] = "<i>NA</i>"
+            lineData[1,"PP"] = "<i>NA</i>"
+          } else if (exists("leaguerosters") &&leaguerosters$player_status[leaguerosters$player_name_full== team$Name[i]]  %in% "NA") {
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Non-Roster</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Non-Roster</i></b>"
+            lineData[1,"Line"] = "<i>NA</i>"
+            lineData[1,"PP"] = "<i>NA</i>"
           } else {
-            lineData[1,"Linemate 1"] = "<i>NA</i>"
-            lineData[1,"Linemate 2"] = "<i>NA</i>"
+            lineData[1,"Linemate 1"] = "<b style='color:red;'><i>NA - Unknown</i></b>"
+            lineData[1,"Linemate 2"] = "<b style='color:red;'><i>NA - Unknown</i></b>"
             lineData[1,"Line"] = "<i>NA</i>"
             lineData[1,"PP"] = "<i>NA</i>"
           }
@@ -1685,20 +1720,38 @@ shinyServer(function(input, output, session) {
           # Gets games remaining this week and next week
           if (grepl('\\(',team$Name[i])) {
             GRCW = gamesCurrWeek$count[gamesCurrWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
-            GRNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
+            GNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
           } else {
             GRCW = NA
-            GRNW = NA
+            GNW = NA
           }
           
-          # Append/merge all info
-          playerData = cbind(Pos. = team$Position[i],
-                             Name = team$Name[i],
-                             lineData,
-                             GRCW = GRCW,
-                             GRNW = GRNW,
-                             `FT PTS` = NA,
-                             playerData)
+          # Get Yahoo positions if Yahoo team was chosen
+          if (!is.null(input$yahooteam) && input$yahooteam != "") {
+            
+            yhpos = leaguerosters$player_display_position[leaguerosters$player_name_full==team$Name[i]]
+            
+            # Append/merge all info
+            playerData = cbind(`TM Pos.` = team$Position[i],
+                               `YH Pos.` = yhpos,
+                               Name = team$Name[i],
+                               lineData,
+                               GRCW = GRCW,
+                               GNW = GNW,
+                               `FT PTS` = NA,
+                               playerData,
+                               ID = playerID)
+          } else {
+            playerData = cbind(`TM Pos.` = team$Position[i],
+                               Name = team$Name[i],
+                               lineData,
+                               GRCW = GRCW,
+                               GNW = GNW,
+                               `FT PTS` = NA,
+                               playerData,
+                               ID = playerID)
+          }
+          
           
           
           # Calculate fantasy points
@@ -1708,7 +1761,16 @@ shinyServer(function(input, output, session) {
           
           # Calc per game stats if needed
           if (input$teamStatType =="pg") {
-            playerData[,-c(1:8,10)] = round(playerData[,-c(1:8,10)]/playerData$GP,2)
+            playerData[,which(!(names(playerData) %in% 
+                                        c("TM Pos.","YH Pos.","Name",
+                                          "Linemate 1","Linemate 2",
+                                          "Line","PP","GRCW","GNW",
+                                          "GP","ID")))] = 
+              round(playerData[,which(!(names(playerData) %in% 
+                                                c("TM Pos.","YH Pos.","Name",
+                                                  "Linemate 1","Linemate 2",
+                                                  "Line","PP","GRCW","GNW",
+                                                  "GP","ID")))]/playerData$GP,2)
           }
           
           # Append player data to team table
@@ -1745,25 +1807,26 @@ shinyServer(function(input, output, session) {
           # Gets games remaining this week and next week
           if (grepl('\\(',team$Name[i])) {
             GRCW = gamesCurrWeek$count[gamesCurrWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
-            GRNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
+            GNW = gamesNextWeek$count[gamesNextWeek$teamabv==substr(team$Name[i], nchar(team$Name[i])-3, nchar(team$Name[i])-1)]
           } else {
             GRCW = NA
-            GRNW = NA
+            GNW = NA
           }
           
           # Get stat totals
           playerData = playerData %>%
-            summarize(GP = max(G), 
+            summarize(GP = nrow(playerData), 
                       Wins = sum(playerData$DEC=='W'),
                       Shutouts = sum(Goalie.Stats_SO),
                       Saves = sum(Goalie.Stats_SV),
                       GA = sum(Goalie.Stats_GA))
-          playerData = cbind(Pos. = team$Position[i],
+          playerData = cbind(`TM Pos.` = team$Position[i],
                              Name = team$Name[i],
                              GRCW = GRCW,
-                             GRNW = GRNW,
+                             GNW = GNW,
                              `FT PTS` = NA,
-                             playerData)
+                             playerData,
+                             ID = playerID)
           
           
           # Calculate fantasy points
@@ -1772,7 +1835,14 @@ shinyServer(function(input, output, session) {
           
           # Calc per game stats if needed
           if (input$teamStatType =="pg") {
-            playerData[,-c(1:4,6)] = round(playerData[,-c(1:4,6)]/playerData$GP,2)
+            playerData[,which(!(names(playerData) %in% 
+                                  c("TM Pos.","Name",
+                                    "GRCW","GNW",
+                                    "GP","ID")))] = 
+              round(playerData[,which(!(names(playerData) %in% 
+                                          c("TM Pos.","Name",
+                                            "GRCW","GNW",
+                                            "GP","ID")))]/playerData$GP,2)
           }
           
           # Append player data to team table
@@ -1795,7 +1865,7 @@ shinyServer(function(input, output, session) {
       # Convert names to actionLinks
       teamSkaterData = setDT(teamSkaterData)
       teamSkaterData$Row = 1:nrow(teamSkaterData)
-      teamSkaterData[, inputId := teamSkaterData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
+      teamSkaterData[, inputId := teamSkaterData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick1', value = %s);", Row))), by = inputId][, inputId := NULL]
 
       # Reactable styling
       skaterTableStyle <- function(value, index, name) {
@@ -1817,9 +1887,12 @@ shinyServer(function(input, output, session) {
             vAlign ="center"
           ),
           columns = list(
-            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 100,maxWidth = 100),
+            `TM Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 100,maxWidth = 100),
                             headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 100,maxWidth = 100),
-                            sticky = "left",vAlign ="center"),
+                            sticky = "left",vAlign ="center",header = with_tooltip("TM Pos.", "Team position slot the player currently fills")),
+            `YH Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 100,maxWidth = 100),
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 100,maxWidth = 100),
+                            sticky = "left",vAlign ="center",header = with_tooltip("YH Pos.", "Listed Yahoo positions")),
             Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 200,maxWidth = 200),
                           headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 200,maxWidth = 200),
                           sticky = "left",vAlign ="center"),
@@ -1838,10 +1911,11 @@ shinyServer(function(input, output, session) {
             GRCW = colDef(style = skaterTableStyle,
                             headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
                             vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
-            GRNW = colDef(style = skaterTableStyle,
-                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
-                          vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
-            Row = colDef(show=F)
+            GNW = colDef(style = skaterTableStyle,
+                        headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                        vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
+            Row = colDef(show=F),
+            ID = colDef(show=F,style = list())
           ),
           wrap = FALSE, 
           outlined = TRUE, 
@@ -1865,7 +1939,7 @@ shinyServer(function(input, output, session) {
     if (nrow(teamGoalieData)>0) {
       teamGoalieData = setDT(teamGoalieData)
       teamGoalieData$Row = (1+nrow(teamSkaterData)):(nrow(teamSkaterData)+nrow(teamGoalieData))
-      teamGoalieData[, inputId := teamGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick', value = %s);", Row))), by = inputId][, inputId := NULL]
+      teamGoalieData[, inputId := teamGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick1', value = %s);", Row))), by = inputId][, inputId := NULL]
       
       
       # Reactable styling
@@ -1889,22 +1963,23 @@ shinyServer(function(input, output, session) {
             vAlign ="center"
           ),
           columns = list(
-            `Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+            `TM Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
                             headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
-                            sticky = "left",vAlign ="center"),
+                            sticky = "left",vAlign ="center",header = with_tooltip("TM Pos.", "Team position slot the player currently fills")),
             Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=200,maxWidth=200),
                           headerStyle = list(background = "#deedf7",fontSize=16,minWidth=200,maxWidth=200),
                           sticky = "left",vAlign ="center"),
             GRCW = colDef(style = goalieTableStyle,
                           headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
                           vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
-            GRNW = colDef(style = goalieTableStyle,
-                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
-                          vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
+            GNW = colDef(style = goalieTableStyle,
+                         headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                         vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
             Shutouts = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
                               headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
                               vAlign ="center"),
-            Row = colDef(show=F)
+            Row = colDef(show=F),
+            ID = colDef(show=F,style = list())
             
           ),
           outlined = TRUE, 
@@ -1930,26 +2005,27 @@ shinyServer(function(input, output, session) {
   })
   
   # Switch tabs on playername click
-  observeEvent(input$playerclick,priority = 10,{
-    if (input$playerclick != 0) {
+  observeEvent(input$playerclick1,priority = 10,{
+    if (input$playerclick1 != 0) {
       shinyjs::runjs("window.scrollTo(0, 0)")
       updateTabItems(session,'tabs',selected = 'playerstats')
-      updateSelectizeInput(session,'playerInput',choices = playernames$Name,selected = teamGLOB$Name[input$playerclick],server=T)
+      updateSelectizeInput(session,'playerInput',choices = playernames$Name,
+                           selected = playernames$Name[playernames$ID== teamGLOB$ID[input$playerclick1]],server=T)
     
       }
   })
   
-  playerclick_d = debounce(reactive({as.numeric(input$playerclick)}),500)
+  playerclick1_d = debounce(reactive({as.numeric(input$playerclick1)}),500)
 
   # Click load button automatically
   observe({
-    num = playerclick_d()
+    num = playerclick1_d()
     if (!length(num)==0) {
       if (num != 0) {
         click('loadPlayerStats')
         
         # Reset the input value to 0
-        session$sendCustomMessage("playerclick", 0)
+        session$sendCustomMessage("playerclick1", 0)
       }
     }
     
@@ -1959,6 +2035,390 @@ shinyServer(function(input, output, session) {
   
 
 
+  ## Fantasy Team - League Roster Stats Box ===============================
+  
+  # Show box if Yahoo Fantasy League is chosen
+  observeEvent(c(input$yahooleague,input$rosterStatRange,
+                 input$rosterPositionFilter), priority = 1,ignoreInit = T,
+    withProgress(value = 0.5,message = "Loading league roster...",{
+      if (input$yahooleague != "") {
+        shinyjs::show("leaguerosterbox")
+        
+        # Get needed league roster info
+        roster = leaguerosters[is.na(leaguerosters$team_managers_manager_manager_id),
+                               c("player_name_full","player_display_position")]
+        colnames(roster) = c('Name','Position')
+        
+        # Get list of players not found in yahoo league data
+        allFantasySkaters$Name[!allFantasySkaters$Name %in% leaguerosters$player_name_full]
+        
+        # Append player IDs to dataframe
+        roster = left_join(roster,allFantasySkaters,by = "Name")
+        roster[roster$Position=='G',] = left_join(roster[roster$Position=='G',-3],allFantasyGoalies,by = "Name")
+        roster = roster[!is.na(roster$ID),]
+        
+        if (nrow(roster)>0){
+          
+          # Read in stats based on chosen filter
+          if (input$rosterStatRange =="s") {
+            rosterSkaterData = read.csv(paste0(currDir,"/Data/allSkaters/",currentSeason,".csv"))
+            rosterGoalieData = read.csv(paste0(currDir,"/Data/allGoalies/",currentSeason,".csv"))
+          } else if (input$rosterStatRange ==7) {
+            rosterSkaterData = read.csv(paste0(currDir,"/Data/allSkaters/7day.csv"))
+            rosterGoalieData = read.csv(paste0(currDir,"/Data/allGoalies/7day.csv"))
+          } else if (input$rosterStatRange ==14) {
+            rosterSkaterData = read.csv(paste0(currDir,"/Data/allSkaters/14day.csv"))
+            rosterGoalieData = read.csv(paste0(currDir,"/Data/allGoalies/14day.csv"))
+          } else if (input$rosterStatRange ==30) {
+            rosterSkaterData = read.csv(paste0(currDir,"/Data/allSkaters/30day.csv"))
+            rosterGoalieData = read.csv(paste0(currDir,"/Data/allGoalies/30day.csv"))
+          }
+          
+          # Only keep players not on any team
+          rosterSkaterData = rosterSkaterData[rosterSkaterData$ID %in% roster$ID,]
+          rosterGoalieData = rosterGoalieData[rosterGoalieData$ID %in% roster$ID,]
+          
+          # Add missing data
+          rosterSkaterData$SHP = rosterSkaterData$SH.Assists + rosterSkaterData$SH.Goals
+          rosterSkaterData$PPP = rosterSkaterData$PP.Assists + rosterSkaterData$PP.Goals
+          rosterGoalieData$SV = rosterGoalieData$SA - rosterGoalieData$GA
+          
+          # Add name and position
+          rosterSkaterData = left_join(rosterSkaterData,roster)
+          rosterGoalieData = left_join(rosterGoalieData,roster)
+          
+          # Add player status
+          playerStatus = leaguerosters[,c("player_status","player_name_full")]
+          colnames(playerStatus) = c("Status","Name")
+          rosterSkaterData = left_join(rosterSkaterData,playerStatus)
+          rosterGoalieData = left_join(rosterGoalieData,playerStatus)
+          
+          # Add line data
+          linedata = playerlines
+          colnames(linedata)[1:3] = c("Name","Linemate 1","Linemate 2")
+          linedata$`Linemate 1` = substr(linedata$`Linemate 1`,1,nchar(linedata$`Linemate 1`)-6)
+          linedata$`Linemate 2` = substr(linedata$`Linemate 2`,1,nchar(linedata$`Linemate 2`)-6)
+          rosterSkaterData = left_join(rosterSkaterData,linedata)
+          rosterSkaterData[rosterSkaterData$Status %in% c("IR","IR-LT","O","DTD"),c('Linemate 1')] = "<b style='color:red;'><i>NA - Injured</i></b>"
+          rosterSkaterData[rosterSkaterData$Status %in% c("IR","IR-LT","O","DTD"),c('Linemate 2')] = ""
+          rosterSkaterData[rosterSkaterData$Status %in% "SUSP",c('Linemate 1')] = "<b style='color:red;'><i>NA - Suspended</i></b>"
+          rosterSkaterData[rosterSkaterData$Status %in% "SUSP",c('Linemate 2')] = ""
+          rosterSkaterData[rosterSkaterData$Status %in% "NA",c('Linemate 1')] = "<b style='color:red;'><i>NA - Non-Roster</i></b>"
+          rosterSkaterData[rosterSkaterData$Status %in% "NA",c('Linemate 2')] = ""
+          rosterSkaterData[is.na(rosterSkaterData$`Linemate 1`),c('Linemate 1')] = "<b style='color:red;'><i>NA - Unknown</i></b>"
+          rosterSkaterData[is.na(rosterSkaterData$`Linemate 1`),c('Linemate 2')] = ""
+          
+          # Add upcoming games counts
+          rosterSkaterData$teamabv = substr(rosterSkaterData$Name,nchar(rosterSkaterData$Name)-3,nchar(rosterSkaterData$Name)-1)
+          rosterGoalieData$teamabv = substr(rosterGoalieData$Name,nchar(rosterGoalieData$Name)-3,nchar(rosterGoalieData$Name)-1)
+          rosterSkaterData = left_join(rosterSkaterData,gamesCurrWeek[,-c(2:3)])
+          colnames(rosterSkaterData)[ncol(rosterSkaterData)]="GRCW"
+          rosterSkaterData = left_join(rosterSkaterData,gamesNextWeek[,-c(2:3)])
+          colnames(rosterSkaterData)[ncol(rosterSkaterData)]="GNW"
+          rosterGoalieData = left_join(rosterGoalieData,gamesCurrWeek[,-c(2:3)])
+          colnames(rosterGoalieData)[ncol(rosterGoalieData)]="GRCW"
+          rosterGoalieData = left_join(rosterGoalieData,gamesNextWeek[,-c(2:3)])
+          colnames(rosterGoalieData)[ncol(rosterGoalieData)]="GNW"
+          
+          # Add fantasy points column
+          rosterSkaterData[,'FT PTS'] = NA
+          rosterGoalieData[,'FT PTS'] = NA
+          
+          # Reorganize
+          rosterSkaterData = subset(rosterSkaterData,
+                                    select = -c(ID,Age,TOI.Total,
+                                                Shot..,FO..,Status,
+                                                teamabv))
+          rosterGoalieData = subset(rosterGoalieData,
+                                    select = -c(ID,Age,SV..,
+                                                Status,teamabv))
+          colnames(rosterSkaterData) = c("GP","G","A",
+                                         "P","PPG","PPA","+/-","SOG",
+                                         "FOW","FOL","HIT","BLK","PIM","SHG",
+                                         "SHA","GWG","SHP","PPP","Name","YH Pos.",
+                                         "Linemate 1","Linemate 2", 
+                                         "Line","PP","GRCW","GNW",'FT PTS')
+          colnames(rosterGoalieData)[c(2,3,6,9)] = c("W","L","SHO","YH Pos.")
+          
+          rosterSkaterData = rosterSkaterData[,c("YH Pos.","Name","Linemate 1",
+                                                 "Linemate 2","Line","PP",
+                                                 "GRCW","GNW","FT PTS",
+                                                 "GP","G","A",
+                                                 "P","+/-","PPG","PPA","PPP",
+                                                 "SHG","SHA","SHP","GWG","SOG",
+                                                 "HIT","BLK","FOW","FOL","PIM")]
+          rosterGoalieData = rosterGoalieData[,c("YH Pos.","Name","GRCW","GNW","FT PTS",
+                                                 "GP","W","L","SHO","SV","GA","SA")]
+          
+          # Add playerIDs
+          rosterSkaterData = left_join(rosterSkaterData,allFantasySkaters)
+          rosterGoalieData = left_join(rosterGoalieData,allFantasyGoalies)
+          
+          # Replace NA/INF with 0
+          rosterSkaterData[,-c(1:8)][apply(rosterSkaterData[,-c(1:8)],c(1,2),is.na)] = 0
+          rosterSkaterData[,-c(1:8)][apply(rosterSkaterData[,-c(1:8)],c(1,2),is.infinite)] = 0
+          rosterGoalieData[,-c(1:4)][apply(rosterGoalieData[,-c(1:4)],c(1,2),is.na)] = 0
+          rosterGoalieData[,-c(1:4)][apply(rosterGoalieData[,-c(1:4)],c(1,2),is.infinite)] = 0
+          
+          rosterSkaterData <<- rosterSkaterData
+          rosterGoalieData <<- rosterGoalieData
+        }
+      }
+  }))
+  
+  
+  # Calc fantasy points and display
+  observeEvent(c(input$yahooleague,input$GFP,input$AFP,input$PFP,input$`+/-FP`,
+                 input$PPGFP,input$PPAFP,input$PPPFP,input$SHGFP,input$SHAFP,input$SHPFP,
+                 input$SOGFP,input$HITFP,input$BLKFP,input$GWGFP,input$PIMFP,input$FOWFP,input$FOLFP,
+                 input$GSFP,input$WFP,input$LFP,input$GAFP,input$SVFP,input$SHOFP,
+                 input$rosterStatRange,input$rosterStatType,input$rosterPositionFilter), priority = 10,ignoreInit = T,
+               delay(500,{
+       
+    if (!is.null(input$yahooleague) & 
+        exists("rosterSkaterData")) {
+      
+      # Skater reactable
+      if (nrow(rosterSkaterData)>0) {
+        
+        # Calculate fantasy points
+        rosterSkaterData$`FT PTS` = 
+          input$GFP*rosterSkaterData$G + input$AFP*rosterSkaterData$A + input$PFP*rosterSkaterData$P + 
+          input$PPGFP*rosterSkaterData$PPG + input$PPAFP*rosterSkaterData$PPA + input$PPPFP*rosterSkaterData$PPP + 
+          input$SHGFP*rosterSkaterData$SHG + input$SHAFP*rosterSkaterData$SHA + input$SHPFP*rosterSkaterData$SHP +
+          input$SOGFP*rosterSkaterData$SOG + input$BLKFP*rosterSkaterData$BLK + input$HITFP*rosterSkaterData$HIT +
+          input$FOWFP*rosterSkaterData$FOW + input$FOLFP*rosterSkaterData$FOL + input$`+/-FP`*rosterSkaterData$`+/-` +
+          input$GWGFP*rosterSkaterData$GWG + input$PIMFP*rosterSkaterData$PIM
+        
+        
+        # Calc per game stats if needed
+        if (input$rosterStatType =="pg") {
+          rosterSkaterData[,which(!(names(rosterSkaterData) %in% 
+                                      c("YH Pos.","Name",
+                                        "Linemate 1","Linemate 2",
+                                        "Line","PP","GRCW","GNW",
+                                        "GP","ID")))] = 
+            round(rosterSkaterData[,which(!(names(rosterSkaterData) %in% 
+                                              c("YH Pos.","Name",
+                                                "Linemate 1","Linemate 2",
+                                                "Line","PP","GRCW","GNW",
+                                                "GP","ID")))]/rosterSkaterData$GP,2)
+        }
+        
+        # Only keep positions selected
+        logictest = data.frame()
+        if (!is.null(input$rosterPositionFilter)) {
+          for (i in 1:length(input$rosterPositionFilter)) {
+            logictest[1:nrow(rosterSkaterData),paste0(i)] = grepl(input$rosterPositionFilter[i],rosterSkaterData$`YH Pos.`)
+          }
+          rosterSkaterData = rosterSkaterData[rowSums(logictest)>0,]
+        }
+        
+        # Sort dataframe and only keep top 100 players
+        rosterSkaterData = rosterSkaterData[order(rosterSkaterData$`FT PTS`,decreasing=T),]
+        if (nrow(rosterSkaterData)>100) {
+          rosterSkaterData = rosterSkaterData[1:100,]
+        }
+        
+        # Convert names to actionLinks
+        rosterSkaterData = setDT(rosterSkaterData)
+        rosterSkaterData$Row = 1:nrow(rosterSkaterData)
+        rosterSkaterData[, inputId := rosterSkaterData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick2', value = %s);", Row))), by = inputId][, inputId := NULL]
+        
+        rosterSkaterData_temp <<- rosterSkaterData
+        
+        # Reactable styling
+        skaterTableStyle <- function(value, index, name) {
+          normalized <- (value - min(rosterSkaterData[[name]], na.rm = T)) /
+            (max(rosterSkaterData[[name]], na.rm = T) - min(rosterSkaterData[[name]], na.rm = T))
+          color <- GrnRedPalette(normalized)
+          list(background = color,fontWeight = 600,fontSize=14,minWidth = 75,maxWidth = 75)
+        }
+        
+        # Skater table output
+        output$rosterSkaterStats <- renderReactable({
+          reactable(
+            rosterSkaterData,
+            defaultColDef = colDef(
+              align = "center",
+              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+              style = skaterTableStyle,
+              html = T,
+              vAlign ="center"
+            ),
+            columns = list(
+              `YH Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 100,maxWidth = 100),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 100,maxWidth = 100),
+                              sticky = "left",vAlign ="center",header = with_tooltip("YH Pos.", "Listed Yahoo positions")),
+              Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 200,maxWidth = 200),
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 200,maxWidth = 200),
+                            sticky = "left",vAlign ="center"),
+              `Linemate 1` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 150,maxWidth = 150),
+                                    headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 150,maxWidth = 150),
+                                    vAlign ="center"),
+              `Linemate 2` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 150,maxWidth = 150),
+                                    headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 150,maxWidth = 150),
+                                    vAlign ="center"),
+              `Line` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
+                              vAlign ="center"),
+              PP = colDef(style = list(fontWeight = 600,fontSize=14,minWidth = 50,maxWidth = 50),
+                          headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 50,maxWidth = 50),
+                          vAlign ="center",header = with_tooltip("PP", "Power Play Line")),
+              GRCW = colDef(style = skaterTableStyle,
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                            vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
+              GNW = colDef(style = skaterTableStyle,
+                           headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                           vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
+              Row = colDef(show=F),
+              ID = colDef(show=F,style = list())
+            ),
+            wrap = FALSE,
+            outlined = TRUE,
+            borderless = TRUE,
+            highlight = TRUE,
+            striped = TRUE,
+            defaultPageSize = 20,
+            fullWidth = TRUE,
+            theme = reactableTheme(
+              style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                           ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                           ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+              backgroundColor = "#f6f8fc"
+            )
+          )
+        })
+        
+        
+      }
+      # Goalie reactable
+      if (nrow(rosterGoalieData)>0) {
+        
+        # Calculate fantasy points
+        rosterGoalieData$`FT PTS` = input$GSFP*rosterGoalieData$GP + input$WFP*rosterGoalieData$W + input$LFP*rosterGoalieData$L +
+          input$SHOFP*rosterGoalieData$SHO + input$SVFP*rosterGoalieData$SV + input$SAFP*rosterGoalieData$SA + 
+          input$GAFP*rosterGoalieData$GA
+        
+        # Calc per game stats if needed
+        if (input$rosterStatType =="pg") {
+          rosterGoalieData[,which(!(names(rosterGoalieData) %in% 
+                                      c("YH Pos.","Name",
+                                        "GRCW","GNW",
+                                        "GP","ID")))] = 
+            round(rosterGoalieData[,which(!(names(rosterGoalieData) %in% 
+                                              c("YH Pos.","Name",
+                                                "GRCW","GNW",
+                                                "GP","ID")))]/rosterGoalieData$GP,2)
+        }
+        
+        # Sort dataframe and only keep top 30 players
+        rosterGoalieData = rosterGoalieData[order(rosterGoalieData$`FT PTS`,decreasing=T),]
+        if (nrow(rosterGoalieData)>30) {
+          rosterGoalieData = rosterGoalieData[1:30,]
+        }
+        
+        
+        rosterGoalieData = setDT(rosterGoalieData)
+        rosterGoalieData$Row = (1+nrow(rosterSkaterData)):(nrow(rosterSkaterData)+nrow(rosterGoalieData))
+        rosterGoalieData[, inputId := rosterGoalieData$Name][, Name := as.character(actionLink(inputId = inputId, label = inputId, onclick = sprintf("Shiny.setInputValue(id = 'playerclick2', value = %s);", Row))), by = inputId][, inputId := NULL]
+        
+        rosterGoalieData_temp <<- rosterGoalieData
+        
+        # Reactable styling
+        goalieTableStyle <- function(value, index, name) {
+          normalized <- (value - min(rosterGoalieData[[name]], na.rm = T)) /
+            (max(rosterGoalieData[[name]], na.rm = T) - min(rosterGoalieData[[name]], na.rm = T))
+          color <- GrnRedPalette(normalized)
+          list(background = color,fontWeight = 600,fontSize=14,minWidth = 75, maxWidth = 75)
+        }
+        
+        # Goalie table output
+        output$rosterGoalieStats <- renderReactable({
+          reactable(
+            rosterGoalieData,
+            defaultColDef = colDef(
+              align = "center",
+              headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75, maxWidth=75),
+              style = goalieTableStyle,
+              maxWidth = 1000,
+              html = T,
+              vAlign ="center"
+            ),
+            columns = list(
+              `YH Pos.` = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                              headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
+                              sticky = "left",vAlign ="center",header = with_tooltip("YH Pos.", "Listed Yahoo positions")),
+              Name = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=200,maxWidth=200),
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth=200,maxWidth=200),
+                            sticky = "left",vAlign ="center"),
+              GRCW = colDef(style = goalieTableStyle,
+                            headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                            vAlign ="center",header = with_tooltip("GRCW", "Games Remaining - Current Week")),
+              GNW = colDef(style = goalieTableStyle,
+                           headerStyle = list(background = "#deedf7",fontSize=16,minWidth = 75,maxWidth = 75),
+                           vAlign ="center",header = with_tooltip("GNW", "Games - Next Week")),
+              Shutouts = colDef(style = list(fontWeight = 600,fontSize=14,minWidth=100,maxWidth=100),
+                                headerStyle = list(background = "#deedf7",fontSize=16,minWidth=100,maxWidth=100),
+                                vAlign ="center"),
+              Row = colDef(show=F),
+              ID = colDef(show=F,style = list())
+              
+            ),
+            outlined = TRUE,
+            borderless = TRUE,
+            highlight = TRUE,
+            defaultPageSize = 10,
+            striped= TRUE,
+            fullWidth = TRUE,
+            wrap = FALSE,
+            resizable = TRUE,
+            theme = reactableTheme(
+              style = list(".rt-tr-striped-sticky" = list(backgroundColor = "#ffffff"),
+                           ".rt-tr-highlight-sticky:hover" = list(backgroundColor = "#D7E4EC"),
+                           ".rt-tr-striped-sticky:hover" = list(backgroundColor = "#D7E4EC")),
+              backgroundColor = "#f6f8fc"
+            )
+          )
+        })
+        
+      }
+    }
+  }))
+  
+  # Switch tabs on playername click
+  observeEvent(input$playerclick2,priority = 10,{
+    if (input$playerclick2 != 0) {
+      shinyjs::runjs("window.scrollTo(0, 0)")
+      
+      # Create dataframe to reference for hyperlinks
+      rosterData = rbind(rosterSkaterData_temp[,c("Name","ID")],rosterGoalieData_temp[,c("Name","ID")])
+      
+      updateTabItems(session,'tabs',selected = 'playerstats')
+      updateSelectizeInput(session,'playerInput',choices = playernames$Name,
+                           selected = playernames$Name[playernames$ID== rosterData$ID[input$playerclick2]],server=T)
+      
+    }
+  })
+  
+  playerclick2_d = debounce(reactive({as.numeric(input$playerclick2)}),500)
+  
+  # Click load button automatically
+  observe({
+    num = playerclick2_d()
+    if (!length(num)==0) {
+      if (num != 0) {
+        click('loadPlayerStats')
+        
+        # Reset the input value to 0
+        session$sendCustomMessage("playerclick2", 0)
+      }
+    }
+    
+  })
+  
+  
+  
   ## Account creation/login ===============================
   # Create userbase file if one does not exist, otherwise read in user base
   if (!file.exists(paste0(currDir,"/Data/Users/user_base.rds"))) {
