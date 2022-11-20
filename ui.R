@@ -27,17 +27,6 @@ enableBookmarking(store="server")
 currDir <<- paste0('C:/Users/Meguel/Desktop/nhl/Fantasy-Hockey-Analyzer')
 setwd(currDir)
 
-
-scrollbarjs = '
-$(document).ready(function(){
-  $("[id^=sw-content-]").on("shown", function(){
-    $(".sidebar").css({"overflow-y": "visible"});
-  }).on("hidden", function(){
-    $(".sidebar").css({"overflow-y": "auto"});
-  });
-});
-'
-
 # Read in all players, current lines, and nhl team names/abvs
 playernames <<- read.csv(paste0(currDir,"/Data/PlayerNames.csv"))
 playerlines <<- read.csv(paste0(currDir,"/Data/PlayerLines.csv"))
@@ -134,44 +123,62 @@ body <- dashboardBody(
   useShinyjs(),
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "test.css"),
-    tags$style(HTML('.box-header .box-title {display: block;}'),
-               HTML('.box-header {padding-top: 0px;
-                                  padding-bottom: 0px;}'),
-               HTML('.Reactable {padding-top: 10px;}'),
-               HTML('.box {background: #f6f8fc}'),
-               HTML('.form-group {margin-bottom: 0px}'),
-               HTML('.main-sidebar {font-size: 20px;
-                                   font-weight: 700;}'),
-               HTML("
-                input[type=number] {
-                      -moz-appearance:textfield;
-                }
-                input[type=number]::{
-                      -moz-appearance:textfield;
-                }
-                input[type=number]::-webkit-outer-spin-button,
-                input[type=number]::-webkit-inner-spin-button {
-                      -webkit-appearance: none;
-                      margin: 0;}"
-               ),
-               HTML("
-                  .selectize-control.single .selectize-input:after{
-                  content: none;
-                  }"
-               ),
-               HTML('#login-button {margin-top: 10px}'),
-               HTML('#loginopen {margin-top: 10px}'),
-               HTML('#createacc {margin-top: 10px;
-                                 margin-right: 20px}'),
-               HTML('.modal-content {border: 2px solid #000000;
-                                     background: #f6f8fc}'),
-               HTML('#logout-button {display: block !important}'),
-               HTML('#leaguesettingsbox {line-height: 0}')
-               ),
+    tags$style(
+      HTML('.box-header .box-title {display: block;}'),
+      HTML('.box-header {padding-top: 0px;
+                        padding-bottom: 0px;}'),
+      HTML('.Reactable {padding-top: 10px;}'),
+      HTML('.box {background: #f6f8fc}'),
+      HTML('.form-group {margin-bottom: 0px}'),
+      HTML('.main-sidebar {font-size: 20px;
+                         font-weight: 700;}'),
+      HTML("
+      input[type=number] {
+            -moz-appearance:textfield;
+      }
+      input[type=number]::{
+            -moz-appearance:textfield;
+      }
+      input[type=number]::-webkit-outer-spin-button,
+      input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;}"
+      ),
+      HTML("
+        .selectize-control.single .selectize-input:after{
+        content: none;
+        }"
+      ),
+      HTML('#login-button {margin-top: 10px}'),
+      HTML('#loginopen {margin-top: 10px}'),
+      HTML('#createacc {margin-top: 10px;
+                       margin-right: 20px}'),
+      HTML('.modal-content {border: 2px solid #000000;
+                           background: #f6f8fc}'),
+      HTML('#logout-button {display: block !important}'),
+      HTML('#leaguesettingsbox {line-height: 0}'),
+      #HTML('.content-wrapper{margin-left: 0px;}'),
+      #HTML("$(function() { $('a.sidebar-toggle').mouseover(function(e) { $(this).click()})});"),
+      #HTML('.body {min-width:1500px;}')
+    ),
     tags$style(type="text/css",
                ".shiny-output-error {visibility: hidden; }",
                ".shiny-output-error:before {visibility: hidden; }"),
-    tags$script(HTML(scrollbarjs)),
+    # tags$script(HTML('$(document).ready(function(){
+    #                   $("[id^=sw-content-]").on("shown", function(){
+    #                     $(".sidebar").css({"overflow-y": "visible"});
+    #                   }).on("hidden", function(){
+    #                     $(".sidebar").css({"overflow-y": "auto"});
+    #                   });
+    #                 });'),
+    #             HTML('$(document).ready(function(){
+    #                   $("[id^=sw-content-]").on("shown", function(){
+    #                     $(".sidebar").css({"overflow-x": "visible"});
+    #                   }).on("hidden", function(){
+    #                     $(".sidebar").css({"overflow-x": "auto"});
+    #                   });
+    #                 });')
+    # ),
     tags$script("
       Shiny.addCustomMessageHandler('gear_click', function(value) {
       Shiny.setInputValue('gear_click', value);
@@ -182,7 +189,7 @@ body <- dashboardBody(
     # Player stats tab
     tabItem(
       tabName = "playerstats",
-      style = "overflow-x: hidden;overflow-y: auto;", 
+      style = "overflow-x: auto;overflow-y: auto;", 
       fluidRow(
         box(
           id = "seasonrankingbox",
@@ -308,7 +315,7 @@ body <- dashboardBody(
     # Fantasy team stats tab
     tabItem(
       tabName = "teamstats",
-      style = "overflow-x: hidden;overflow-y: auto;",
+      style = "overflow-x: auto;overflow-y: auto;",
       column(
         width = 9,
         box(
@@ -328,7 +335,7 @@ body <- dashboardBody(
             column(
               width=6,align="center",offset = 1,
               fluidRow(
-                h1("Team Composition")
+                h1("Team Slots")
               ),
               fluidRow(
                 column(width = 4,
@@ -451,24 +458,14 @@ body <- dashboardBody(
           reactableOutput("teamGoalieStats")
         ),
         box(
-          id = "leagueroster",
+          id = "leaguerosterbox",
           width = 12,
-          title = h4("League Roster"),
+          title = h4("Top Available Players"),
           solidHeader=T,
           status = "primary",
           collapsible = TRUE,
           collapsed = FALSE,
           fluidRow(
-            column(
-              width = 3,
-              align = "center",
-              radioGroupButtons(
-                "rosteravail",
-                h2("Player Availability"),
-                choices = c("Free Agents Only" = "fa","All Players" = "all"),
-                status = "primary"
-              )
-            ),
             column(
               width = 3,
               align = "center",
@@ -487,12 +484,27 @@ body <- dashboardBody(
               selectInput(
                 "rosterStatRange",
                 label = h2("Filter Period"),
-                choices = c("Last Season" = "ls",
-                            "Current Season" = "s",
+                choices = c("Full Season" = "s",
                             "Last 30 Days" = 30,
                             "Last 14 Days" = 14,
                             "Last 7 Days" = 7),
                 selected = "s"
+              )
+            ),
+            column(
+              width = 3,
+              align = "center",
+              pickerInput(
+                "rosterPositionFilter",
+                label = h2("Filter Skater Positions"),
+                choices = c("C","LW","RW","D"),
+                multiple=T,
+                selected = character(0),
+                options = list(
+                  selectedTextFormat = "count",
+                  countSelectedText = "{0} selected",
+                  noneSelectedText = "No filter"
+                )
               )
             )
           ),
@@ -503,7 +515,6 @@ body <- dashboardBody(
     )
   ),
   div(style = "width: 100%; height: 90vh")
-  
 )
 
 ## Create Page =================================
