@@ -211,7 +211,6 @@ body = dashboardBody(
     tabItem(
       tabName = "playerstats",
       style = "overflow-x: auto;overflow-y: auto;",
-      hidden(div(class="hiddenlogin",shinyauthr::loginUI(id = "logintemp",cookie_expiry = cookie_expiry))),
       fluidRow(
         box(
           id = "seasonrankingbox",

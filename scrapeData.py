@@ -3,6 +3,7 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import os
+import sys
 import fiscalyear
 from lxml.html import fromstring
 from itertools import cycle
@@ -12,7 +13,8 @@ import time
 import unicodedata
 fiscalyear.START_MONTH = 10
 currentSeason = fiscalyear.FiscalYear.current().fiscal_year
-
+os.chdir(os.path.dirname(sys.argv[0]))
+currDir = os.getcwd()
 
 def get_proxies(testurl):
     url = 'https://free-proxy-list.net/'
@@ -78,9 +80,9 @@ def pullPlayerStats(seasons,playerType):
         
         # Get locally stored data to cross-reference
         if (playerType =="skaters"):
-            currentData = pd.read_csv("Data/allSkaters/"+str(currentSeason)+".csv")
+            currentData = pd.read_csv(currDir+"/Data/allSkaters/"+str(currentSeason)+".csv")
         else:
-            currentData = pd.read_csv("Data/allGoalies/"+str(currentSeason)+".csv")
+            currentData = pd.read_csv(currDir+"/Data/allGoalies/"+str(currentSeason)+".csv")
         # Iterate through all players that played this season
         for player in playerIDs:
             if (sum(currentData['ID']==player)!=0):
@@ -93,7 +95,7 @@ def pullPlayerStats(seasons,playerType):
                 print("Getting",player, "stats for",season)
                 
                 # Create folders to store player data if they dont exist
-                basedirectory = "Data/Players/" + player
+                basedirectory = currDir+"/Data/Players/" + player
                 os.makedirs(basedirectory, exist_ok=True)
                 
                 # Get player game log for current season
@@ -145,20 +147,20 @@ def pullPlayerStats(seasons,playerType):
                 playerstats.to_csv(basedirectory +'/'+str(season)+'.csv',index =False)
                 
                 # Save player image if it doesnt exist
-                if not os.path.exists('www/playerimages/'+ player +'.jpg'):
+                if not os.path.exists(currDir+'/www/playerimages/'+ player +'.jpg'):
                     page = requests.get(url)
                     soup = BeautifulSoup(page.text, 'lxml')
                     
                     if len(soup.find_all('img',{"alt" : "Photo of "})) == 1:
                         imgurl = soup.find_all('img',{"alt" : "Photo of "})[0].get('src')
-                        img = open('www/playerimages/'+ player +'.jpg','wb')
+                        img = open(currDir+'/www/playerimages/'+ player +'.jpg','wb')
                         img.write(requests.get(imgurl).content)
                         img.close()
 
 def getPlayerNames(seasons):
     
     # Get list of all playerIDs in data folder
-    localPlayerIDs = next(os.walk("Data/Players/"))[1]
+    localPlayerIDs = next(os.walk(currDir+"/Data/Players/"))[1]
     
     playerNamesDF = pd.DataFrame({"ID":localPlayerIDs})
     playerNamesDF['Name'] = np.nan
@@ -245,7 +247,7 @@ def getPlayerNames(seasons):
     playerNamesDF = playerNamesDF.replace('Yegor Zamula', 'Egor Zamula',regex=True)
     
     # Save to file
-    playerNamesDF.to_csv("Data/PlayerNames.csv",index=False)
+    playerNamesDF.to_csv(currDir+"/Data/PlayerNames.csv",index=False)
 
 
 
@@ -253,10 +255,10 @@ def getPlayerNames(seasons):
 # (optional time parameters are "7day","14day",or "30day")
 def mergeSeasonStats(seasons,time = ""):
     # Get list of all playerIDs in data folder
-    playerIDs = next(os.walk("Data/Players/"))[1]
+    playerIDs = next(os.walk(currDir+"/Data/Players/"))[1]
     
     # Get player names and positions
-    playerNamesDF = pd.read_csv("Data/PlayerNames.csv")
+    playerNamesDF = pd.read_csv(currDir+"/Data/PlayerNames.csv")
 
     # If single season is used as input, convert to list of length 1
     if type(seasons) is int:
@@ -270,11 +272,11 @@ def mergeSeasonStats(seasons,time = ""):
             if (playerNamesDF['Position'].loc[playerNamesDF['ID']==player] != "G").iloc[0]:
                 
                 # Data directory
-                datadir = "Data/Players/"+player+"/"+str(season)+".csv"
+                datadir = currDir+"/Data/Players/"+player+"/"+str(season)+".csv"
                 
                 # Check if player played this year
                 if os.path.exists(datadir):
-                    playerdata = pd.read_csv("Data/Players/"+player+"/"+str(season)+".csv")
+                    playerdata = pd.read_csv(currDir+"/Data/Players/"+player+"/"+str(season)+".csv")
                     playerdata['Date'] = pd.to_datetime(playerdata['Date'])
                     if time == "7day":
                         startDate = pd.Timestamp.now() - timedelta(days=7)
@@ -318,11 +320,11 @@ def mergeSeasonStats(seasons,time = ""):
                 
             else:
                 # Data directory
-                datadir = "Data/Players/"+player+"/"+str(season)+".csv"
+                datadir = currDir+"/Data/Players/"+player+"/"+str(season)+".csv"
                 
                 # Check if player played this year
                 if os.path.exists(datadir):
-                    playerdata = pd.read_csv("Data/Players/"+player+"/"+str(season)+".csv")
+                    playerdata = pd.read_csv(currDir+"/Data/Players/"+player+"/"+str(season)+".csv")
                     playerdata['Date'] = pd.to_datetime(playerdata['Date'])
                     if time == "7day":
                         startDate = pd.Timestamp.now() - timedelta(days=7)
@@ -353,20 +355,20 @@ def mergeSeasonStats(seasons,time = ""):
                     mergedDataGoalies = mergedDataGoalies.append(summarydata)
             
         # Save to csv
-        os.makedirs("Data/allSkaters/", exist_ok=True)
-        os.makedirs("Data/allGoalies/", exist_ok=True)
+        os.makedirs(currDir+"/Data/allSkaters/", exist_ok=True)
+        os.makedirs(currDir+"/Data/allGoalies/", exist_ok=True)
         if time == "7day":
-            mergedDataSkaters.to_csv("Data/allSkaters/7day.csv",index=False)
-            mergedDataGoalies.to_csv("Data/allGoalies/7day.csv",index=False)
+            mergedDataSkaters.to_csv(currDir+"/Data/allSkaters/7day.csv",index=False)
+            mergedDataGoalies.to_csv(currDir+"/Data/allGoalies/7day.csv",index=False)
         elif time == "14day":
-            mergedDataSkaters.to_csv("Data/allSkaters/14day.csv",index=False)
-            mergedDataGoalies.to_csv("Data/allGoalies/14day.csv",index=False)
+            mergedDataSkaters.to_csv(currDir+"/Data/allSkaters/14day.csv",index=False)
+            mergedDataGoalies.to_csv(currDir+"/Data/allGoalies/14day.csv",index=False)
         elif time == "30day":
-            mergedDataSkaters.to_csv("Data/allSkaters/30day.csv",index=False)
-            mergedDataGoalies.to_csv("Data/allGoalies/30day.csv",index=False)  
+            mergedDataSkaters.to_csv(currDir+"/Data/allSkaters/30day.csv",index=False)
+            mergedDataGoalies.to_csv(currDir+"/Data/allGoalies/30day.csv",index=False)  
         else:
-            mergedDataSkaters.to_csv("Data/allSkaters/"+str(season)+".csv",index=False)
-            mergedDataGoalies.to_csv("Data/allGoalies/"+str(season)+".csv",index=False)
+            mergedDataSkaters.to_csv(currDir+"/Data/allSkaters/"+str(season)+".csv",index=False)
+            mergedDataGoalies.to_csv(currDir+"/Data/allGoalies/"+str(season)+".csv",index=False)
         
 def getPlayerLines():
     # Get URL for each team
@@ -378,7 +380,7 @@ def getPlayerLines():
     teams = [i['href'] for i in teams]
     
     # Read in NHL teams names + abv
-    teamnames = pd.read_csv("Data/teamNames.csv")
+    teamnames = pd.read_csv(currDir+"/Data/teamNames.csv")
     
     # Loop through each team
     allPlayerLines = pd.DataFrame()
@@ -501,7 +503,7 @@ def getPlayerLines():
     allPlayerLines = allPlayerLines.replace('Yegor Zamula', 'Egor Zamula',regex=True)
     allPlayerLines = allPlayerLines.replace('Michael Matheson', 'Mike Matheson',regex=True)
     # Write to csv
-    allPlayerLines.to_csv("Data/PlayerLines.csv",index=False)
+    allPlayerLines.to_csv(currDir+"/Data/PlayerLines.csv",index=False)
 
 
 def pullSeasonSchedule(currentSeason):
@@ -514,7 +516,7 @@ def pullSeasonSchedule(currentSeason):
     seasonschedule['Home'] = seasonschedule['Home'].str.replace(".","",regex=False)
     
     # Append team abv and sort by date
-    teamnames = pd.read_csv("Data/teamNames.csv")
+    teamnames = pd.read_csv(currDir+"/Data/teamNames.csv")
     seasonschedule = pd.merge(seasonschedule, teamnames, left_on='Visitor', right_on='teamname')
     seasonschedule = seasonschedule.drop('teamname',axis=1)
     seasonschedule = seasonschedule.rename(columns={"teamabv": "VisABV"})
@@ -525,9 +527,9 @@ def pullSeasonSchedule(currentSeason):
     seasonschedule = seasonschedule.sort_values('Date')
     
     # Save to file
-    if not os.path.exists("Data/Schedule/"):
-        os.makedirs("Data/Schedule/")
-    seasonschedule.to_csv("Data/Schedule/"+str(currentSeason)+".csv",index=False)
+    if not os.path.exists(currDir+"/Data/Schedule/"):
+        os.makedirs(currDir+"/Data/Schedule/")
+    seasonschedule.to_csv(currDir+"/Data/Schedule/"+str(currentSeason)+".csv",index=False)
     
 
 
