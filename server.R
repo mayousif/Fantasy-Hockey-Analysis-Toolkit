@@ -47,7 +47,7 @@ shinyServer(function(input, output, session) {
       playerID <<- playernames$ID[playernames$Name == input$playerInput]
       
       # Merge game logs
-      files = list.files(paste0("Data/Players/",playerID,"/"), full.names=T,pattern = "csv")
+      files = list.files(paste0(currDir,"/Data/Players/",playerID,"/"), full.names=T,pattern = "csv")
       
       playerdata = data.frame()
       for (i in 1:length(files)) {
@@ -486,7 +486,7 @@ shinyServer(function(input, output, session) {
       }
       
     } else {
-      allPlayerData <<- read.csv(paste0("Data/allGoalies/",input$playerRankSeason,".csv"))
+      allPlayerData <<- read.csv(paste0(currDir,"/Data/allGoalies/",input$playerRankSeason,".csv"))
     }
     allPlayerData <<- allPlayerData[allPlayerData$GP>=as.integer(input$playerRankGPFilter),]
     
@@ -2612,14 +2612,14 @@ shinyServer(function(input, output, session) {
                  input$SOGTOG,input$HITTOG,input$BLKTOG,input$GWGTOG,input$PIMTOG,input$FOWTOG,input$FOLTOG,
                  input$GSTOG,input$WTOG,input$LTOG,input$GATOG,input$SVTOG,input$SHOTOG,
                  input$rosterStatRange,input$rosterStatType,input$rosterPositionFilter,input$leaguetype), priority = 10,ignoreInit = T,
-               delay(500,{
+               delay(5000,{
        
     if (!is.null(input$yahooleague) & 
         exists("rosterSkaterData")) {
       
       # Skater reactable
       if (nrow(rosterSkaterData)>0) {
-        
+
         # Calculate fantasy points if need
         if (input$leaguetype=="points") {
           rosterSkaterData$`FT PTS` = 
@@ -2645,6 +2645,7 @@ shinyServer(function(input, output, session) {
                                                 "Line","PP","GRCW","GNW",
                                                 "GP","ID","S%")))]/rosterSkaterData$GP,2)
         }
+        
         
         # Only keep positions selected
         logictest = data.frame()
@@ -2685,13 +2686,11 @@ shinyServer(function(input, output, session) {
                          "HITTOG","BLKTOG","FOWTOG","FOLTOG","PIMTOG","S%TOG")
           rosterSkaterData = rosterSkaterData[!(names(rosterSkaterData) %in% "FT PTS")]
           for (stat in statinputs) {
-            print(input[[stat]])
             if (as.numeric(input[[stat]])==0) {
               rosterSkaterData = rosterSkaterData[!(names(rosterSkaterData) %in% gsub("TOG","",stat))]
             }
           }
         }
-        
         
         # Convert names to actionLinks
         rosterSkaterData = setDT(rosterSkaterData)
@@ -2762,6 +2761,7 @@ shinyServer(function(input, output, session) {
             )
           )
         })
+        
         
         
       }
@@ -2880,7 +2880,6 @@ shinyServer(function(input, output, session) {
             )
           )
         })
-        
       }
     }
   }))
@@ -2977,7 +2976,6 @@ shinyServer(function(input, output, session) {
         dashboardUser(
           name = strong(credentials()$info[1]), 
           image =logos$File[logos$Team==as.character(credentials()$info[5])], 
-          footer = p("The footer", class = "text-center"),
           fluidRow(
             dashboardUserItem(
               width = 6,
@@ -2999,9 +2997,10 @@ shinyServer(function(input, output, session) {
       token <<- readRDS(paste0(currDir,"/Data/Users/",credentials()$info[1],"/",credentials()$info[1],".Rds"))
       token$refresh()
       hideElement("yahooconnect")
-      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status = "primary")
+      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc","From Account"="acc" ,"From Yahoo" = "yh"),status = "primary")
       output$yahooconnectui = renderUI({HTML('<p style="color:green;font-weight:700;font-size:16px;">Connected to Yahoo!</p>')})
     } else {
+      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc","From Account"="acc"),status = "primary")
       output$yahooconnectui = renderUI({actionButton("yahooconnect","Connect to Yahoo")})
     }
     
@@ -3079,10 +3078,10 @@ shinyServer(function(input, output, session) {
       token <<- readRDS(paste0(currDir,"/Data/Users/",credentials()$info[1],"/",credentials()$info[1],".Rds"))
       token$refresh()
       hideElement("yahooconnect")
-      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status = "primary")
+      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc","From Account"="acc" ,"From Yahoo" = "yh"),status = "primary")
       output$yahooconnectui = renderUI({HTML('<p style="color:green;font-weight:700;font-size:16px;">Connected to Yahoo!</p>')})
     } else {
-      browseURL("https://api.login.yahoo.com/oauth2/request_auth?client_id=dj0yJmk9OXU3WjZCUmxsYkRXJmQ9WVdrOWJXbHhVbEZhUVZNbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTc4&redirect_uri=oob&response_type=code")
+      js$browseURL("https://api.login.yahoo.com/oauth2/request_auth?client_id=dj0yJmk9OXU3WjZCUmxsYkRXJmQ9WVdrOWJXbHhVbEZhUVZNbWNHbzlNQT09JnM9Y29uc3VtZXJzZWNyZXQmc3Y9MCZ4PTc4&redirect_uri=oob&response_type=code")
       showModal(modalDialog(size="s",
                             title = h1("Input Yahoo Authorization Code",align="center"),
                             textInput("yahooCode", "",placeholder = 'e.g., 7rtq8c'),
@@ -3126,7 +3125,8 @@ shinyServer(function(input, output, session) {
         HTML('<p style="color:green;font-weight:700;font-size:16px;">Successfully connected!</p>')
       })
       hideElement("yahooconnect")
-      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc", "Yahoo" = "yh"),status ="primary")
+      updateRadioGroupButtons(session,"datasource",choices = c("Local" = "loc","From Account"="acc" ,"From Yahoo" = "yh"),status ="primary")
+      output$yahooconnectui = renderUI({HTML('<p style="color:green;font-weight:700;font-size:16px;">Connected to Yahoo!</p>')})
       delay(2500,{removeModal()})
       
       

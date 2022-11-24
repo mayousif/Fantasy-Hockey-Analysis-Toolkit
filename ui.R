@@ -91,6 +91,13 @@ allFantasyGoalies <<- unique(rbind(goalieData[,c('ID','Name')],goalieDataLS[,c('
 # Team logos
 logos <<- read.csv(paste0(currDir,"/Data/Logos.csv"))
 
+# JS Function to open links
+js_browser <- "
+shinyjs.browseURL = function(url) {
+  window.open(url,'_blank');
+}
+"
+
 # # Connect to or setup and connect to local SQLite db
 # if (file.exists(paste0(currDir,"/Data/Users/sessiondb"))) {
 #   db <<- dbConnect(SQLite(), paste0(currDir,"/Data/Users/sessiondb"))
@@ -148,6 +155,7 @@ sidebar = dashboardSidebar(
 ## Main Body =================================
 body = dashboardBody(
   useShinyjs(),
+  extendShinyjs(text = js_browser, functions = 'browseURL'),
   tags$head(
     tags$meta(name = "viewport", content = "width=1600"),
     tags$link(rel = "stylesheet", type = "text/css", href = "test.css"),
@@ -538,7 +546,7 @@ body = dashboardBody(
 
 ## Create Page =================================
 shinydashboardPlus::dashboardPage(
-      md=F,
+      #md=F,
       skin = "blue",
       dashboardHeader(
         fixed = TRUE,
