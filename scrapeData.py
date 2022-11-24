@@ -340,6 +340,7 @@ def mergeSeasonStats(seasons,time = ""):
                         "ID": player,
                         "Age": playerdata['Age'].max(),
                         "GP": playerdata.shape[0],
+                        "TOI Total": playerdata['TOI'].sum(),
                         "Wins": playerdata.loc[playerdata['DEC']=="W"].shape[0],
                         "Losses": playerdata.loc[playerdata['DEC']=="L"].shape[0],
                         "GA": playerdata['Goalie Stats_GA'].sum(),
@@ -498,7 +499,7 @@ def getPlayerLines():
     allPlayerLines = allPlayerLines.replace('John Jason Peterka ', 'Jj Peterka ',regex=True)
     allPlayerLines = allPlayerLines.replace('Alexander Wennberg', 'Alex Wennberg',regex=True)
     allPlayerLines = allPlayerLines.replace('Yegor Zamula', 'Egor Zamula',regex=True)
-    
+    allPlayerLines = allPlayerLines.replace('Michael Matheson', 'Mike Matheson',regex=True)
     # Write to csv
     allPlayerLines.to_csv("Data/PlayerLines.csv",index=False)
 

@@ -20,11 +20,12 @@ library(httr)
 library(YFAR)
 library(rjson)
 library(reactlog)
+library(RSQLite)
 
 enableBookmarking(store="server")
 
 # Current directory of the app
-currDir <<- paste0('C:/Users/Meguel/Desktop/nhl/Fantasy-Hockey-Analyzer')
+currDir <<- getwd()
 setwd(currDir)
 
 # Read in all players, current lines, and nhl team names/abvs
@@ -90,9 +91,35 @@ allFantasyGoalies <<- unique(rbind(goalieData[,c('ID','Name')],goalieDataLS[,c('
 # Team logos
 logos <<- read.csv(paste0(currDir,"/Data/Logos.csv"))
 
+# # Connect to or setup and connect to local SQLite db
+# if (file.exists(paste0(currDir,"/Data/Users/sessiondb"))) {
+#   db <<- dbConnect(SQLite(), paste0(currDir,"/Data/Users/sessiondb"))
+# } else {
+#   db <<- dbConnect(SQLite(), paste0(currDir,"/Data/Users/sessiondb"))
+#   dbCreateTable(db, "sessionids", c(user = "TEXT", sessionid = "TEXT", login_time = "TEXT"))
+# }
+# 
+# cookie_expiry <<- 14 # Days until session expires
+# 
+# # This function must accept two parameters: user and sessionid. It will be called whenever the user
+# # successfully logs in with a password.  This function saves to your database.
+# add_sessionid_to_db <<- function(user, sessionid, conn = db) {
+#   tibble(user = user, sessionid = sessionid, login_time = as.character(now())) %>%
+#     dbWriteTable(conn, "sessionids", ., append = TRUE)
+# }
+# 
+# # This function must return a data.frame with columns user and sessionid  Other columns are also okay
+# # and will be made available to the app after log in as columns in credentials()$user_auth
+# get_sessionids_from_db <<- function(conn = db, expiry = cookie_expiry) {
+#   dbReadTable(conn, "sessionids") %>%
+#     mutate(login_time = ymd_hms(login_time)) %>%
+#     as_tibble() %>%
+#     filter(login_time > now() - days(expiry))
+# }
+
+
 ## Sidebar =================================
 sidebar = dashboardSidebar(
-  width = "15%",
   sidebarMenu(
     id = "tabs",
     menuItem(
@@ -100,7 +127,7 @@ sidebar = dashboardSidebar(
       "Fantasy Metrics", 
       tabName = "teamstats", 
       icon = icon("people-group")
-    ),    
+    ),
     menuItem(
       text = "Player Stats",
       startExpanded = TRUE,
@@ -109,7 +136,7 @@ sidebar = dashboardSidebar(
         tabName = "playerstats",
         icon=NULL,
         selectizeInput(
-          "playerInput", 
+          "playerInput",
           "Select Player",
           choices = NULL,
           selected = NULL
@@ -119,9 +146,10 @@ sidebar = dashboardSidebar(
   )
 )
 ## Main Body =================================
-body <- dashboardBody(
+body = dashboardBody(
   useShinyjs(),
   tags$head(
+    tags$meta(name = "viewport", content = "width=1600"),
     tags$link(rel = "stylesheet", type = "text/css", href = "test.css"),
     tags$style(
       HTML('.box-header .box-title {display: block;}'),
@@ -157,39 +185,33 @@ body <- dashboardBody(
                            background: #f6f8fc}'),
       HTML('#logout-button {display: block !important}'),
       HTML('#leaguesettingsbox {line-height: 0}'),
-      #HTML('.content-wrapper{margin-left: 0px;}'),
-      #HTML("$(function() { $('a.sidebar-toggle').mouseover(function(e) { $(this).click()})});"),
-      #HTML('.body {min-width:1500px;}')
+      HTML('.skin-blue .main-header .navbar {background-color:#6e8fb0}'),
+      HTML('.skin-blue .main-header .logo {background-color:#222d32;}'),
+      HTML('.skin-blue .main-header .navbar .sidebar-toggle:hover {background-color:#6e8fb0;}'),
+      HTML('.skin-blue .main-header .logo:hover {background-color:#222d32;}'),
+      HTML('.box.box-solid.box-primary > .box-header {background-color:#6e8fb0;}'),
+      HTML('.btn-primary {background-color:#6e8fb0;}'),
+      HTML('.material-switch {padding-top: 18px;}'),
+      HTML('.material-switch > label::before {right: -4px};')
     ),
     tags$style(type="text/css",
                ".shiny-output-error {visibility: hidden; }",
                ".shiny-output-error:before {visibility: hidden; }"),
-    # tags$script(HTML('$(document).ready(function(){
-    #                   $("[id^=sw-content-]").on("shown", function(){
-    #                     $(".sidebar").css({"overflow-y": "visible"});
-    #                   }).on("hidden", function(){
-    #                     $(".sidebar").css({"overflow-y": "auto"});
-    #                   });
-    #                 });'),
-    #             HTML('$(document).ready(function(){
-    #                   $("[id^=sw-content-]").on("shown", function(){
-    #                     $(".sidebar").css({"overflow-x": "visible"});
-    #                   }).on("hidden", function(){
-    #                     $(".sidebar").css({"overflow-x": "auto"});
-    #                   });
-    #                 });')
-    # ),
     tags$script("
       Shiny.addCustomMessageHandler('gear_click', function(value) {
       Shiny.setInputValue('gear_click', value);
       });
     ")
   ),
+  br(),
+  br(),
+  br(),
   tabItems(
     # Player stats tab
     tabItem(
       tabName = "playerstats",
-      style = "overflow-x: auto;overflow-y: auto;", 
+      style = "overflow-x: auto;overflow-y: auto;",
+      hidden(div(class="hiddenlogin",shinyauthr::loginUI(id = "logintemp",cookie_expiry = cookie_expiry))),
       fluidRow(
         box(
           id = "seasonrankingbox",
@@ -321,17 +343,11 @@ body <- dashboardBody(
         box(
           id = "teamloadingbox",
           width = 12,
-          title = h4("Create/Upload Team"),
+          title = h4("Team Builder"),
           solidHeader=T,
           status = "primary",
           collapsible = TRUE,
           fluidRow(
-            column(
-              width = 4,align="center",
-              radioGroupButtons("datasource",h1("Data Source"),choices = c("Local" = "loc"),status = "primary"),
-              uiOutput("teamloadchoices"),
-              uiOutput("fantasyteam")
-            ),
             column(
               width=6,align="center",offset = 1,
               fluidRow(
@@ -360,6 +376,12 @@ body <- dashboardBody(
                 )
                   
               )
+            ),
+            column(
+              width = 4,align="center",
+              radioGroupButtons("datasource",h1("Generate Team"),choices = c("Manually" = "man"),status = "primary"),
+              uiOutput("teamloadchoices"),
+              uiOutput("fantasyteam")
             )
           ),
           fluidRow(
@@ -405,10 +427,8 @@ body <- dashboardBody(
             fluidRow(
               radioGroupButtons(
                 "leaguetype",h1("League Type"),
-                choices = c("H2H Pts" = "h2hp",
-                            "H2H" = "h2h",
-                            "Roto" = "roto",
-                            "Pts Only" = "points"),
+                choices = c("Points-based" = "points",
+                            "Category-based" = "cat"),
                 status = "primary"
               )
             )
@@ -518,20 +538,22 @@ body <- dashboardBody(
 )
 
 ## Create Page =================================
-shinyUI(dashboardPage(
-  skin = "blue",
-  dashboardHeader(
-    title = tagList(h5(class = "logo-lg","FHA")),
-    titleWidth =  "15%",
-    tags$li(
-      class = "dropdown",
-      fluidRow(
-        actionButton("loginopen",strong("Login")),
-        actionButton("createacc",strong("Create Account"))
-      )
-    ),
-    userOutput("user")),
-  sidebar,
-  body
-))
+shinydashboardPlus::dashboardPage(
+      md=F,
+      skin = "blue",
+      dashboardHeader(
+        fixed = TRUE,
+        title = tagList(h5(class = "logo-lg","FHA")),
+        #titleWidth =  "15%",
+        tags$li(
+          class = "dropdown",
+          fluidRow(
+            actionButton("loginopen",strong("Login")),
+            actionButton("createacc",strong("Create Account"))
+          )
+        ),
+        userOutput("user")),
+      sidebar,
+      body
+)
 
